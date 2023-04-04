@@ -187,7 +187,7 @@ class _BaseAttacker:
                 buffers = payload["buffers"]
                 new_model.eval()
             else:
-                # The user sends no buffers and there are no public bufers
+                # The user sends no buffers and there are no public buffers
                 # (i.e. the user in in training mode and does not send updates)
                 new_model.train()
                 for module in new_model.modules():

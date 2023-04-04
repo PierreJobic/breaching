@@ -4,6 +4,7 @@ import torch
 from typing import List
 
 from .make_functional import make_functional_with_buffers
+from .mask_functions import mask_lookup
 
 
 class GradientLoss(torch.nn.Module):
@@ -53,7 +54,7 @@ class GradientLoss(torch.nn.Module):
 
         seen_data_idx = 0
         for i in range(self.local_hyperparams["steps"]):
-            data = candidate[seen_data_idx : seen_data_idx + self.local_hyperparams["data_per_step"]]
+            data = candidate[seen_data_idx:seen_data_idx + self.local_hyperparams["data_per_step"]]
             seen_data_idx += self.local_hyperparams["data_per_step"]
             seen_data_idx = seen_data_idx % candidate.shape[0]
             labels = self.local_hyperparams["labels"][i]
@@ -70,6 +71,32 @@ class GradientLoss(torch.nn.Module):
 
         # Return last loss as the "best" task loss
         return gradient, task_loss
+
+
+class MaskedGradientLoss(GradientLoss):
+    """Super-class to simplify masked-gradient-based objectives."""
+
+    def __init__(self, mask_fn, gradient_loss_cls=None, **kwargs):
+        super().__init__()
+        self.task_regularization = 0
+        self.gradient_loss_cls = gradient_loss_cls
+        self.mask_fn = mask_lookup[mask_fn](**kwargs)
+
+    def __repr__(self):
+        return self.gradient_loss_cls.__repr__() + f"and a mask={self.mask_fn.__class__.__name__}"
+
+    def forward(self, model, gradient_data, candidate, labels):
+        gradient, task_loss = self._grad_fn(model, candidate, labels)
+        self.mask_fn.process_architecture(model)
+        with torch.autocast(candidate.device.type, enabled=self.cfg_impl.mixed_precision):
+            objective = self.gradient_based_loss(gradient, gradient_data)
+        if self.task_regularization != 0:
+            objective += self.task_regularization * task_loss
+        return objective, task_loss.detach()
+
+    def gradient_based_loss(self, gradient_rec, gradient_data):
+        masked_gradient_rec, masked_gradient_data = self.mask_fn(gradient_rec, gradient_data)
+        return self.gradient_loss_cls.gradient_based_loss(masked_gradient_rec, masked_gradient_data)
 
 
 class Euclidean(GradientLoss):
@@ -229,7 +256,7 @@ class MaskedCosineSimilarity(GradientLoss):
         self.task_regularization = task_regularization
 
     def __repr__(self):
-        return f"Masked Cosine Similarity with scale={self.scale} and task reg={self.task_regularization}. Mask val={self.mask_value}"
+        return f"masked Cosine Similarity with scale={self.scale} and task reg={self.task_regularization}. mask val={self.mask_value}"
 
     def gradient_based_loss(self, gradient_rec, gradient_data):
         scalar_product, rec_norm, data_norm = 0.0, 0.0, 0.0

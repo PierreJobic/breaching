@@ -136,7 +136,7 @@ class HonestServer:
         pass
 
     def distribute_payload(self, query_id=0):
-        """Server payload to send to users. These are only references to simplfiy the simulation."""
+        """Server payload to send to users. These are only references to simplify the simulation."""
 
         self.reconfigure_model(self.cfg_server.model_state, query_id)
         honest_model_parameters = [p for p in self.model.parameters()]  # do not send only the generators

@@ -1,7 +1,6 @@
 """This file is a basic VGG implementation from
 https://github.com/kuangliu/pytorch-cifar/blob/master/models/vgg.py
-"""
-"""
+
 MIT License
 
 Copyright (c) 2017 liukuang
@@ -23,10 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-"""
 
-
-"""VGG11/13/16/19 in Pytorch."""
+VGG11/13/16/19 in Pytorch."""
 import torch
 import torch.nn as nn
 

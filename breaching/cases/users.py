@@ -158,7 +158,7 @@ class UserSingleStep(torch.nn.Module):
         if self.clip_value > 0:  # Compute per-example gradients and clip them in this case
             shared_grads = [torch.zeros_like(p) for p in self.model.parameters()]
             for data_idx in range(B):
-                data_point = {key: val[data_idx : data_idx + 1] for key, val in data.items()}
+                data_point = {key: val[data_idx:data_idx + 1] for key, val in data.items()}
                 per_example_grads = _compute_batch_gradient(data_point)
                 self._clip_list_of_grad_(per_example_grads)
                 torch._foreach_add_(shared_grads, per_example_grads)
@@ -360,7 +360,7 @@ class UserMultiStep(UserSingleStep):
         label_list = []
         for step in range(self.num_local_updates):
             data = {
-                k: v[seen_data_idx : seen_data_idx + self.num_data_per_local_update_step] for k, v in user_data.items()
+                k: v[seen_data_idx:seen_data_idx + self.num_data_per_local_update_step] for k, v in user_data.items()
             }
             seen_data_idx += self.num_data_per_local_update_step
             seen_data_idx = seen_data_idx % self.num_data_points
@@ -500,7 +500,7 @@ class MultiUserAggregate(UserMultiStep):
                 aggregate_labels.append(user_data["metadata"]["labels"])
             if params := user_data["metadata"]["local_hyperparams"] is not None:
                 if params["labels"] is not None:
-                    aggregate_label_lists += [l.cpu() for l in user_data["metadata"]["local_hyperparams"]["labels"]]
+                    aggregate_label_lists += [labels.cpu() for labels in user_data["metadata"]["local_hyperparams"]["labels"]]
 
         shared_data = dict(
             gradients=aggregate_updates,

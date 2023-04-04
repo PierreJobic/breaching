@@ -1,9 +1,10 @@
 """Helper code to instantiate various models."""
+from collections import OrderedDict
 
 import torch
 import torchvision
 
-from collections import OrderedDict
+from . import custom_models
 
 from .resnets import ResNet, resnet_depths_to_config
 from .densenets import DenseNet, densenet_depths_to_config
@@ -400,7 +401,11 @@ def _construct_vision_model(cfg_model, cfg_data, pretrained=True, **kwargs):
                 )
             )
         else:
-            raise ValueError("Model could not be found.")
+            try:
+                model_cls = getattr(custom_models, cfg_model)
+                model = model_cls(num_classes=classes)
+            except AttributeError:
+                raise ValueError("Model could not be found.")
 
     return VisionContainer(model)
 

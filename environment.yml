@@ -11,7 +11,7 @@
 name: breaching
 channels:
   - pytorch
-  - huggingface
+  # - huggingface
   - defaults
 dependencies:
   - python=3.9
@@ -25,11 +25,11 @@ dependencies:
   - scikit-learn
   - scikit-image
   - tensorboard
-  - torchtext
-  - transformers
-  - datasets
+  # - torchtext
+  # - transformers
+  # - datasets
   - tensorflow
-  - nltk
+  # - nltk
   - pip
   - cython
   - scipy

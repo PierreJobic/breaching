@@ -12,6 +12,8 @@ images
 
 *.temp.sh
 
+data/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -149,3 +151,4 @@ dmypy.json
 *.ods
 
 *.json
+*.pickle

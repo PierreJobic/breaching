@@ -63,7 +63,7 @@ def main_launcher(cfg):
     """This is boiler-plate code for the launcher."""
 
     log.info("--------------------------------------------------------------")
-    log.info("-----Launching federating learning breach experiment! --------")
+    log.info("---- Launching federating learning breach experiment! --------")
 
     launch_time = time.time()
     if cfg.seed is None:
@@ -78,7 +78,7 @@ def main_launcher(cfg):
         f"Finished computations {cfg.name} with total train time: "
         f"{str(datetime.timedelta(seconds=time.time() - launch_time))}"
     )
-    log.info("-----------------Job finished.-------------------------------")
+    log.info("---------------- Job finished. ------------------------------")
 
 
 if __name__ == "__main__":

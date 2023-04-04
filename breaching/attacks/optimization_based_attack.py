@@ -13,7 +13,7 @@ import time
 
 from .base_attack import _BaseAttacker
 from .auxiliaries.regularizers import regularizer_lookup, TotalVariation
-from .auxiliaries.objectives import Euclidean, CosineSimilarity, objective_lookup
+from .auxiliaries.objectives import Euclidean, CosineSimilarity, MaskedGradientLoss, objective_lookup
 from .auxiliaries.augmentations import augmentation_lookup
 
 import logging
@@ -26,11 +26,19 @@ class OptimizationBasedAttacker(_BaseAttacker):
 
     def __init__(self, model, loss_fn, cfg_attack, setup=dict(dtype=torch.float, device=torch.device("cpu"))):
         super().__init__(model, loss_fn, cfg_attack, setup)
-        objective_fn = objective_lookup.get(self.cfg.objective.type)
-        if objective_fn is None:
-            raise ValueError(f"Unknown objective type {self.cfg.objective.type} given.")
+        if "Masked" in self.cfg.objective.type:
+            print(f"self.cfg.objective.type: {self.cfg.objective.type}")
+            objective_fn = objective_lookup.get(self.cfg.objective.type[7:])
+            if objective_fn is None:
+                raise ValueError(f"Unknown objective type {self.cfg.objective.type} given.")
+            else:
+                self.objective = MaskedGradientLoss(gradient_loss_cls=objective_fn(**self.cfg.objective), **self.cfg.objective)
         else:
-            self.objective = objective_fn(**self.cfg.objective)
+            objective_fn = objective_lookup.get(self.cfg.objective.type)
+            if objective_fn is None:
+                raise ValueError(f"Unknown objective type {self.cfg.objective.type} given.")
+            else:
+                self.objective = objective_fn(**self.cfg.objective)
         self.regularizers = []
         try:
             for key in self.cfg.regularization.keys():
@@ -123,7 +131,7 @@ class OptimizationBasedAttacker(_BaseAttacker):
                 if iteration + 1 == self.cfg.optim.max_iterations or iteration % self.cfg.optim.callback == 0:
                     timestamp = time.time()
                     log.info(
-                        f"| It: {iteration + 1} | Rec. loss: {objective_value.item():2.4f} | "
+                        f"| It: {iteration + 1}/{self.cfg.optim.max_iterations} | Rec. loss: {objective_value.item():2.4f} | "
                         f" Task loss: {task_loss.item():2.4f} | T: {timestamp - current_wallclock:4.2f}s"
                     )
                     current_wallclock = timestamp
