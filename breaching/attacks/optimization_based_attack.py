@@ -28,11 +28,13 @@ class OptimizationBasedAttacker(_BaseAttacker):
         super().__init__(model, loss_fn, cfg_attack, setup)
         if "Masked" in self.cfg.objective.type:
             print(f"self.cfg.objective.type: {self.cfg.objective.type}")
-            objective_fn = objective_lookup.get(self.cfg.objective.type[7:])
+            objective_fn = objective_lookup.get(self.cfg.objective.type[7:])  # Remove "Masked-"
             if objective_fn is None:
                 raise ValueError(f"Unknown objective type {self.cfg.objective.type} given.")
             else:
-                self.objective = MaskedGradientLoss(gradient_loss_cls=objective_fn(**self.cfg.objective), **self.cfg.objective)
+                self.objective = MaskedGradientLoss(
+                    mask_cfg=self.cfg.objective.mask, gradient_loss_cls=objective_fn(**self.cfg.objective), **self.cfg.objective
+                )
         else:
             objective_fn = objective_lookup.get(self.cfg.objective.type)
             if objective_fn is None:
@@ -76,9 +78,7 @@ class OptimizationBasedAttacker(_BaseAttacker):
         candidate_solutions = []
         try:
             for trial in range(self.cfg.restarts.num_trials):
-                candidate_solutions += [
-                    self._run_trial(rec_models, shared_data, labels, stats, trial, initial_data, dryrun)
-                ]
+                candidate_solutions += [self._run_trial(rec_models, shared_data, labels, stats, trial, initial_data, dryrun)]
                 scores[trial] = self._score_trial(candidate_solutions[trial], labels, rec_models, shared_data)
         except KeyboardInterrupt:
             print("Trial procedure manually interruped.")
@@ -182,9 +182,7 @@ class OptimizationBasedAttacker(_BaseAttacker):
                         candidate.grad.mul_(self.cfg.optim.grad_clip / (grad_norm + 1e-6))
                 if self.cfg.optim.signed is not None:
                     if self.cfg.optim.signed == "soft":
-                        scaling_factor = (
-                            1 - iteration / self.cfg.optim.max_iterations
-                        )  # just a simple linear rule for now
+                        scaling_factor = 1 - iteration / self.cfg.optim.max_iterations  # just a simple linear rule for now
                         candidate.grad.mul_(scaling_factor).tanh_().div_(scaling_factor)
                     elif self.cfg.optim.signed == "hard":
                         candidate.grad.sign_()

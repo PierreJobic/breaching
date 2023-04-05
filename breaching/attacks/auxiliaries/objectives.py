@@ -54,7 +54,7 @@ class GradientLoss(torch.nn.Module):
 
         seen_data_idx = 0
         for i in range(self.local_hyperparams["steps"]):
-            data = candidate[seen_data_idx:seen_data_idx + self.local_hyperparams["data_per_step"]]
+            data = candidate[seen_data_idx : seen_data_idx + self.local_hyperparams["data_per_step"]]
             seen_data_idx += self.local_hyperparams["data_per_step"]
             seen_data_idx = seen_data_idx % candidate.shape[0]
             labels = self.local_hyperparams["labels"][i]
@@ -76,11 +76,11 @@ class GradientLoss(torch.nn.Module):
 class MaskedGradientLoss(GradientLoss):
     """Super-class to simplify masked-gradient-based objectives."""
 
-    def __init__(self, mask_fn, gradient_loss_cls=None, **kwargs):
+    def __init__(self, mask_cfg, gradient_loss_cls=None, **kwargs):
         super().__init__()
         self.task_regularization = 0
         self.gradient_loss_cls = gradient_loss_cls
-        self.mask_fn = mask_lookup[mask_fn](**kwargs)
+        self.mask_fn = mask_lookup[mask_cfg.type](**mask_cfg)
 
     def __repr__(self):
         return self.gradient_loss_cls.__repr__() + f"and a mask={self.mask_fn.__class__.__name__}"
@@ -116,7 +116,9 @@ class Euclidean(GradientLoss):
     @staticmethod
     @torch.jit.script
     def _euclidean(gradient_rec: List[torch.Tensor], gradient_data: List[torch.Tensor]):
-        objective = gradient_rec[0].new_zeros(1,)
+        objective = gradient_rec[0].new_zeros(
+            1,
+        )
         for rec, data in zip(gradient_rec, gradient_data):
             objective += (rec - data).pow(2).sum()
         return 0.5 * objective
@@ -152,17 +154,19 @@ class EuclideanTag(GradientLoss):
         return self._weighted_euclidean_l1(gradient_rec, gradient_data, weights, self.tag_scale) * self.scale
 
     def __repr__(self):
-        return (
-            f"Tag loss with scale={self.scale}, weight scheme {self.scale_scheme}, L1 scale {self.tag_scale} "
-            f"and task reg={self.task_regularization}"
-        )
+        return f"Tag loss with scale={self.scale}, weight scheme {self.scale_scheme}, L1 scale {self.tag_scale} " f"and task reg={self.task_regularization}"
 
     @staticmethod
     @torch.jit.script
     def _weighted_euclidean_l1(
-        gradient_rec: List[torch.Tensor], gradient_data: List[torch.Tensor], weights: torch.Tensor, tag_scale: float,
+        gradient_rec: List[torch.Tensor],
+        gradient_data: List[torch.Tensor],
+        weights: torch.Tensor,
+        tag_scale: float,
     ):
-        objective = gradient_rec[0].new_zeros(1,)
+        objective = gradient_rec[0].new_zeros(
+            1,
+        )
         for rec, data, weight in zip(gradient_rec, gradient_data, weights):
             objective += (rec - data).pow(2).sum() + tag_scale * weight * (rec - data).abs().sum()
         return 0.5 * objective
@@ -185,7 +189,9 @@ class L1Loss(GradientLoss):
     @staticmethod
     @torch.jit.script
     def _l1loss(gradient_rec: List[torch.Tensor], gradient_data: List[torch.Tensor]):
-        objective = gradient_rec[0].new_zeros(1,)
+        objective = gradient_rec[0].new_zeros(
+            1,
+        )
         for rec, data in zip(gradient_rec, gradient_data):
             objective += (rec - data).abs().sum()
         return 0.5 * objective
@@ -210,9 +216,15 @@ class CosineSimilarity(GradientLoss):
     @staticmethod
     @torch.jit.script
     def _cosine_sim(gradient_rec: List[torch.Tensor], gradient_data: List[torch.Tensor]):
-        scalar_product = gradient_rec[0].new_zeros(1,)
-        rec_norm = gradient_rec[0].new_zeros(1,)
-        data_norm = gradient_rec[0].new_zeros(1,)
+        scalar_product = gradient_rec[0].new_zeros(
+            1,
+        )
+        rec_norm = gradient_rec[0].new_zeros(
+            1,
+        )
+        data_norm = gradient_rec[0].new_zeros(
+            1,
+        )
 
         for rec, data in zip(gradient_rec, gradient_data):
             scalar_product += (rec * data).sum()
@@ -286,9 +298,15 @@ class FastCosineSimilarity(GradientLoss):
     @staticmethod
     @torch.jit.script
     def _cosine_sim(gradient_rec: List[torch.Tensor], gradient_data: List[torch.Tensor]):
-        scalar_product = gradient_rec[0].new_zeros(1,)
-        rec_norm = gradient_rec[0].new_zeros(1,)
-        data_norm = gradient_rec[0].new_zeros(1,)
+        scalar_product = gradient_rec[0].new_zeros(
+            1,
+        )
+        rec_norm = gradient_rec[0].new_zeros(
+            1,
+        )
+        data_norm = gradient_rec[0].new_zeros(
+            1,
+        )
 
         for rec, data in zip(gradient_rec, gradient_data):
             scalar_product += (rec * data).sum()

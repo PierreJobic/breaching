@@ -1,0 +1,6 @@
+# @package _global_
+attack:
+  objective:
+    mask:
+      type: "mask_fixed_bernoulli"
+      p: 0.1

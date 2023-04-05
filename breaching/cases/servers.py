@@ -37,9 +37,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def construct_server(
-    model, loss_fn, cfg_case, setup=dict(device=torch.device("cpu"), dtype=torch.float), external_dataloader=None
-):
+def construct_server(model, loss_fn, cfg_case, setup=dict(device=torch.device("cpu"), dtype=torch.float), external_dataloader=None):
     """Interface function."""
     if external_dataloader is None and cfg_case.server.has_external_data:
         user_split = cfg_case.data.examples_from_split
@@ -72,9 +70,7 @@ class HonestServer:
 
     THREAT = "Honest-but-curious"
 
-    def __init__(
-        self, model, loss, cfg_case, setup=dict(dtype=torch.float, device=torch.device("cpu")), external_dataloader=None
-    ):
+    def __init__(self, model, loss, cfg_case, setup=dict(dtype=torch.float, device=torch.device("cpu")), external_dataloader=None):
         """Inialize the server settings."""
         self.model = model
         self.model.eval()
@@ -187,9 +183,7 @@ class MaliciousModelServer(HonestServer):
         # Token Embeddings are not valid "first" layers and hencec not included here
     )
 
-    def __init__(
-        self, model, loss, cfg_case, setup=dict(dtype=torch.float, device=torch.device("cpu")), external_dataloader=None
-    ):
+    def __init__(self, model, loss, cfg_case, setup=dict(dtype=torch.float, device=torch.device("cpu")), external_dataloader=None):
         """Inialize the server settings."""
         super().__init__(model, loss, cfg_case, setup, external_dataloader)
         self.model_state = "custom"  # Do not mess with model parameters no matter what init is agreed upon
@@ -210,9 +204,7 @@ class MaliciousModelServer(HonestServer):
         else:
             raise ValueError("Unknown modification")
 
-        modified_model, secrets = self._place_malicious_block(
-            modified_model, block_fn, **self.cfg_server.model_modification
-        )
+        modified_model, secrets = self._place_malicious_block(modified_model, block_fn, **self.cfg_server.model_modification)
         self.secrets["ImprintBlock"] = secrets
 
         if self.cfg_server.model_modification.position is not None:
@@ -230,16 +222,12 @@ class MaliciousModelServer(HonestServer):
 
         # Reduce failures in later layers:
         # Note that this clashes with the VAE option!
-        self._normalize_throughput(
-            modified_model, gain=self.cfg_server.model_gain, trials=self.cfg_server.normalize_rounds
-        )
+        self._normalize_throughput(modified_model, gain=self.cfg_server.model_gain, trials=self.cfg_server.normalize_rounds)
         self.model = modified_model
         model = modified_model
         return self.model
 
-    def _place_malicious_block(
-        self, modified_model, block_fn, type, position=None, handle_preceding_layers=None, **kwargs
-    ):
+    def _place_malicious_block(self, modified_model, block_fn, type, position=None, handle_preceding_layers=None, **kwargs):
         """The block is placed directly before the named module given by "position".
         If none is given, the block is placed before the first layer.
         """
@@ -295,18 +283,14 @@ class MaliciousModelServer(HonestServer):
                     if not first_conv_set:
                         torch.nn.init.dirac_(module.weight)
                         num_groups = module.out_channels // 3
-                        module.weight.data[: num_groups * 3] = torch.cat(
-                            [module.weight.data[:3, :3, :, :]] * num_groups
-                        )
+                        module.weight.data[: num_groups * 3] = torch.cat([module.weight.data[:3, :3, :, :]] * num_groups)
                         first_conv_set = True
                     else:
                         torch.nn.init.zeros_(module.weight)  # this is the resnet rule
                 if "downsample.0" in name:
                     torch.nn.init.dirac_(module.weight)
                     num_groups = module.out_channels // module.in_channels
-                    concat = torch.cat(
-                        [module.weight.data[: module.in_channels, : module.in_channels, :, :]] * num_groups
-                    )
+                    concat = torch.cat([module.weight.data[: module.in_channels, : module.in_channels, :, :]] * num_groups)
                     module.weight.data[: num_groups * module.in_channels] = concat
                 if isinstance(module, torch.nn.ReLU):
                     replace_module_by_instance(model, module, torch.nn.Identity())
@@ -341,9 +325,7 @@ class MaliciousModelServer(HonestServer):
                         if self.external_dataloader is not None:
                             random_data_sample = next(iter(self.external_dataloader))[0].to(**self.setup)
                         else:
-                            random_data_sample = torch.randn(
-                                self.cfg_data.batch_size, *self.cfg_data.shape, **self.setup
-                            )
+                            random_data_sample = torch.randn(self.cfg_data.batch_size, *self.cfg_data.shape, **self.setup)
 
                         model(random_data_sample)
                         std, mu = torch.std_mean(features[name])
@@ -391,9 +373,7 @@ class MaliciousTransformerServer(HonestServer):
 
     THREAT = "Malicious (Parameters)"
 
-    def __init__(
-        self, model, loss, cfg_case, setup=dict(dtype=torch.float, device=torch.device("cpu")), external_dataloader=None
-    ):
+    def __init__(self, model, loss, cfg_case, setup=dict(dtype=torch.float, device=torch.device("cpu")), external_dataloader=None):
         """Inialize the server settings."""
         super().__init__(model, loss, cfg_case, setup, external_dataloader)
         self.secrets = dict()
@@ -460,9 +440,7 @@ class MaliciousTransformerServer(HonestServer):
         )
 
         # Take care of second linear layers, and unused mha layers first
-        set_flow_backward_layer(
-            lookup["second_linear_layers"], ff_transposed=ff_transposed, eps=self.cfg_server.param_modification.eps
-        )
+        set_flow_backward_layer(lookup["second_linear_layers"], ff_transposed=ff_transposed, eps=self.cfg_server.param_modification.eps)
         disable_mha_layers(lookup["unused_mha_outs"])
 
         if self.cfg_data.task == "masked-lm" and not self.cfg_data.disable_mlm:
@@ -484,9 +462,7 @@ class MaliciousTransformerServer(HonestServer):
         if self.cfg_server.param_modification.bin_setup == "concatenate":
             std, mu = compute_feature_distribution(self.model, lookup["first_linear_layers"][0], measurements[0], self)
             # And add imprint modification to the first linear layer
-            make_imprint_layer(
-                lookup["first_linear_layers"], measurements[0], mu, std, hidden_dim, embedding_dim, ff_transposed
-            )
+            make_imprint_layer(lookup["first_linear_layers"], measurements[0], mu, std, hidden_dim, embedding_dim, ff_transposed)
         elif self.cfg_server.param_modification.bin_setup == "separate":
             for idx, linear_layer in enumerate(lookup["first_linear_layers"]):
                 std, mu = compute_feature_distribution(self.model, linear_layer, measurements[idx], self)
@@ -528,9 +504,7 @@ class MaliciousClassParameterServer(HonestServer):
 
     THREAT = "Malicious (Parameters)"
 
-    def __init__(
-        self, model, loss, cfg_case, setup=dict(dtype=torch.float, device=torch.device("cpu")), external_dataloader=None
-    ):
+    def __init__(self, model, loss, cfg_case, setup=dict(dtype=torch.float, device=torch.device("cpu")), external_dataloader=None):
         """Inialize the server settings."""
         super().__init__(model, loss, cfg_case, setup, external_dataloader)
         self.model_state = "custom"  # Do not mess with model parameters no matter what init is agreed upon
@@ -631,9 +605,7 @@ class MaliciousClassParameterServer(HonestServer):
                     attack_state = dict(feature_loc=feature_loc, feature_val=feature_val)
 
                     # binary attack to recover all single gradients
-                    attack_state["num_target_data"] = int(
-                        torch.count_nonzero((reduced_shared_data["metadata"]["labels"] == int(cls_to_obtain)).to(int))
-                    )
+                    attack_state["num_target_data"] = int(torch.count_nonzero((reduced_shared_data["metadata"]["labels"] == int(cls_to_obtain)).to(int)))
                     attack_state["num_data_points"] = shared_data["metadata"]["num_data_points"]
 
                     if self.cfg_server.one_shot_binary_attack:
@@ -650,18 +622,13 @@ class MaliciousClassParameterServer(HonestServer):
                         log.info(f"Spent {user.counted_queries} user queries so far.")
 
                 # return to the model with multiplier=1, (better with larger multiplier, but not optimizable if it is too large)
-                self.reconfigure_for_feature_attack(
-                    feature_val, feature_loc, target_classes=cls_to_obtain, allow_reset_param_weights=True
-                )
+                self.reconfigure_for_feature_attack(feature_val, feature_loc, target_classes=cls_to_obtain, allow_reset_param_weights=True)
                 server_payload = self.distribute_payload()
 
                 # recover image by image
                 # add reversed() because the ith is always more confident than i-1th
                 grad_i = list(reversed(recovered_single_gradients))[self.cfg_server.grad_idx]
-                log.info(
-                    f"Start recovering datapoint {self.cfg_server.grad_idx} of label "
-                    f"{reduced_shared_data['metadata']['labels'][0].item()}."
-                )
+                log.info(f"Start recovering datapoint {self.cfg_server.grad_idx} of label " f"{reduced_shared_data['metadata']['labels'][0].item()}.")
 
                 final_shared_data = copy.deepcopy(reduced_shared_data)
                 final_shared_data["metadata"]["num_data_points"] = 1
@@ -837,9 +804,7 @@ class MaliciousClassParameterServer(HonestServer):
             shared_data, _ = user.compute_local_updates(server_payload)
             num_target = int(torch.count_nonzero((shared_data["metadata"]["labels"] == int(target_class)).to(int)))
             if num_target != 0:
-                est_features.append(
-                    torch.flatten(reconstruct_feature(shared_data, target_class)).detach().cpu().numpy()
-                )
+                est_features.append(torch.flatten(reconstruct_feature(shared_data, target_class)).detach().cpu().numpy())
                 sample_sizes.append(num_target)
 
         if len(est_features) == 0:
@@ -870,9 +835,7 @@ class MaliciousClassParameterServer(HonestServer):
         l_b.copy_(masked_bias)
 
     @torch.no_grad()
-    def reconfigure_for_feature_attack(
-        self, feature_val, feature_loc, target_classes=None, allow_reset_param_weights=False
-    ):
+    def reconfigure_for_feature_attack(self, feature_val, feature_loc, target_classes=None, allow_reset_param_weights=False):
         self.reset_model()
         if target_classes is None:
             target_classes = [self.cfg_server.target_cls_idx]

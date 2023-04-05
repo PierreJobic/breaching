@@ -1,0 +1,35 @@
+# @package _global_
+# Configuration defaults
+# Settings are separated into case, attack, analysis
+defaults:
+  - case: mask_image_custom
+  - attack: mask_DLG
+  - _self_
+  - override hydra/job_logging: custom
+
+base_dir: outputs
+hydra:
+  sweep:
+    dir: ${base_dir}/${name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  run:
+    dir: ${base_dir}/${name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+# To change output folder location:
+# Set hydra.output_subdir=something
+# searchpath:
+#   - pkg://
+
+seed: 100
+# A name for this run [will be used for the summary table and outputs folder]
+name: mask
+
+# debug implementation by running every loop just once:
+dryrun: False
+
+# When benchmarking:
+num_trials: 10
+save_reconstruction: True
+
+# Using GPU
+case:
+  impl:
+    enable_gpu_acc: True
