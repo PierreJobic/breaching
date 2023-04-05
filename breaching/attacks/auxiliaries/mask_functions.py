@@ -172,6 +172,68 @@ class mask_percentage_out_channels(MetaMask):
             self.fixed_mask += dimension_lookup_out_channels[d](self.p, [grad])
 
 
+class mask_sparsity_quantile(MetaMask):
+    """
+    clip to zero the values of grad to keep only a certain %. Only small magnitude gradients are clipped.
+    """
+
+    def __init__(self, sparsity, *args, **kwargs):
+        super().__init__()
+        self.sparsity = sparsity
+        self.need_init = True
+
+    def _generate_mask(self, gradients):
+        concat_gradients = torch.cat([grad.flatten().abs() for grad in gradients])
+        treshold = torch.quantile(concat_gradients, self.sparsity)
+        self.fixed_mask = [(torch.abs(grad) >= treshold) for grad in gradients]
+        self.need_init = False
+
+
+class mask_sparsity_reversed_quantile(MetaMask):
+    """
+    clip to zero the values of grad to keep only a certain %. Only small magnitude gradients are clipped.
+    """
+
+    def __init__(self, sparsity, *args, **kwargs):
+        super().__init__()
+        self.sparsity = 1.0 - sparsity
+        self.need_init = True
+
+    def _generate_mask(self, gradients):
+        concat_gradients = torch.cat([grad.flatten().abs() for grad in gradients])
+        treshold = torch.quantile(concat_gradients, self.sparsity)
+        self.fixed_mask = [(torch.abs(grad) <= treshold) for grad in gradients]
+        self.need_init = False
+
+
+class mask_sparsity_random(MetaMask):
+    """
+    clip to zero the values of grad to keep only a certain %. Only small magnitude gradients are clipped.
+    """
+
+    # / I would like to generate a function that takes a gradients which is a list of tensors, and returns
+    # a mask which is a list of tensors of the same shape as the gradients whose values are 0 or 1 depending
+    # on whether the gradient is kept or not. I would like to choose them randomly based on the sparsity.
+
+    def __init__(self, sparsity, *args, **kwargs):
+        super().__init__()
+        self.sparsity = 1.0 - sparsity
+        self.need_init = True
+
+    def _generate_mask(self, gradients):
+
+        concat_gradients = torch.cat([grad.flatten().abs() for grad in gradients])
+        n = torch.numel(concat_gradients)
+        indices = torch.randperm(n)[: int(n * self.sparsity)]
+        mask = torch.zeros_like(concat_gradients)
+        mask[indices] = 1.0
+        self.fixed_mask = []
+        for grad in gradients:
+            self.fixed_mask.append(mask[: torch.numel(grad)].reshape(grad.shape))
+            mask = mask[torch.numel(grad) :]
+        self.need_init = False
+
+
 def MaskParameters1d_percentage(p, gradient_data):
     """1d such as bias with (out_channels)"""
     for grad in gradient_data:
@@ -290,6 +352,9 @@ mask_lookup = {
     "mask_adaptative_layer_clip": mask_adaptative_layer_clip,
     "mask_percentage_in_channels": mask_percentage_in_channels,
     "mask_percentage_out_channels": mask_percentage_out_channels,
+    "mask_sparsity_quantile": mask_sparsity_quantile,
+    "mask_sparsity_reversed_quantile": mask_sparsity_reversed_quantile,
+    "mask_sparsity_random": mask_sparsity_random,
 }
 
 dimension_lookup_in_channels = {
