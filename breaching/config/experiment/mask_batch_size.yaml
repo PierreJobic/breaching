@@ -1,0 +1,6 @@
+# @package _global_
+hydra:
+  sweeper:
+    params:
+      attack.objective.type: euclidean
+      case.user.num_data_points: 1,2,4,8,16,32,64,128

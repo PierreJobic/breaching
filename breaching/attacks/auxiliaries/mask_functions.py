@@ -189,6 +189,21 @@ class mask_sparsity_quantile(MetaMask):
         self.need_init = False
 
 
+class mask_sparsity_layer_quantile(MetaMask):
+    """
+    clip to zero the values of grad to keep only a certain %. Only small magnitude gradients are clipped.
+    """
+
+    def __init__(self, sparsity, *args, **kwargs):
+        super().__init__()
+        self.sparsity = sparsity
+        self.need_init = True
+
+    def _generate_mask(self, gradients):
+        self.fixed_mask = [(torch.abs(grad) >= torch.quantile(grad.flatten().abs(), self.sparsity)) for grad in gradients]
+        self.need_init = False
+
+
 class mask_sparsity_reversed_quantile(MetaMask):
     """
     clip to zero the values of grad to keep only a certain %. Only small magnitude gradients are clipped.
@@ -203,6 +218,21 @@ class mask_sparsity_reversed_quantile(MetaMask):
         concat_gradients = torch.cat([grad.flatten().abs() for grad in gradients])
         treshold = torch.quantile(concat_gradients, self.sparsity)
         self.fixed_mask = [(torch.abs(grad) <= treshold) for grad in gradients]
+        self.need_init = False
+
+
+class mask_sparsity_layer_reversed_quantile(MetaMask):
+    """
+    clip to zero the values of grad to keep only a certain %. Only small magnitude gradients are clipped.
+    """
+
+    def __init__(self, sparsity, *args, **kwargs):
+        super().__init__()
+        self.sparsity = 1.0 - sparsity
+        self.need_init = True
+
+    def _generate_mask(self, gradients):
+        self.fixed_mask = [(torch.abs(grad) <= torch.quantile(grad.flatten().abs(), self.sparsity)) for grad in gradients]
         self.need_init = False
 
 
@@ -355,6 +385,7 @@ mask_lookup = {
     "mask_sparsity_quantile": mask_sparsity_quantile,
     "mask_sparsity_reversed_quantile": mask_sparsity_reversed_quantile,
     "mask_sparsity_random": mask_sparsity_random,
+    "mask_sparsity_layer_quantile": mask_sparsity_layer_quantile,
 }
 
 dimension_lookup_in_channels = {

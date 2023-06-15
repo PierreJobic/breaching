@@ -10,7 +10,7 @@ defaults:
 data:
   partition: random
 
-model: McMahan_32_32
+model: custom_McMahan_32_32
 
 # Server and user:
 num_queries: 1

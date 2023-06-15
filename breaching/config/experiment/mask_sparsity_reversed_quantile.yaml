@@ -2,7 +2,6 @@
 hydra:
   sweeper:
     params:
+      attack.objective.type: Masked-euclidean
       +attack.objective.mask.type: "mask_sparsity_reversed_quantile"
-      +attack.objective.mask.sparsity: 0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99 
-
-num_trials: 25
+      +attack.objective.mask.sparsity: 0., 0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99 

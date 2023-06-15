@@ -27,7 +27,7 @@ class OptimizationBasedAttacker(_BaseAttacker):
     def __init__(self, model, loss_fn, cfg_attack, setup=dict(dtype=torch.float, device=torch.device("cpu"))):
         super().__init__(model, loss_fn, cfg_attack, setup)
         if "Masked" in self.cfg.objective.type:
-            print(f"self.cfg.objective.type: {self.cfg.objective.type}")
+            logging.info(f"self.cfg.objective.type: {self.cfg.objective.type}")
             objective_fn = objective_lookup.get(self.cfg.objective.type[7:])  # Remove "Masked-"
             if objective_fn is None:
                 raise ValueError(f"Unknown objective type {self.cfg.objective.type} given.")

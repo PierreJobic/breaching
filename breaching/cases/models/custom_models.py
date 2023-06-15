@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torchvision import models
 
 
-class McMahan_CNN(nn.Module):
+class custom_McMahan_CNN(nn.Module):
     """Convolutional Neural Network architecture as described in McMahan 2017
     paper :
     [Communication-Efficient Learning of Deep Networks from
@@ -40,7 +40,7 @@ class McMahan_CNN(nn.Module):
         return output_tensor
 
 
-class McMahan_32_32(nn.Module):
+class custom_McMahan_32_32(nn.Module):
     """Modified CNN architecture to allow 32x32 images
 
     Expected input_size: [N,C,32,32]
@@ -74,7 +74,43 @@ class McMahan_32_32(nn.Module):
         return output_tensor  # (batch_size, num_classes)
 
 
-class deeper_McMahan_CNN(nn.Module):
+class custom_batchnorm_McMahan_32_32(nn.Module):
+    """Modified CNN architecture to allow 32x32 images
+
+    Expected input_size: [N,C,32,32]
+    """
+
+    def __init__(self, num_classes=10, is_gray=False) -> None:
+        super().__init__()
+        if is_gray:
+            self.conv1 = nn.Conv2d(1, 32, 5, padding=1)
+            self.input_shape = torch.Size([1, 28, 28])
+        else:
+            self.conv1 = nn.Conv2d(3, 32, 5, padding=1)
+            self.input_shape = torch.Size([3, 28, 28])
+        self.bn1 = nn.BatchNorm2d(32)
+        self.output_shape = torch.Size([num_classes])
+        self.conv2 = nn.Conv2d(32, 64, 5, padding=1)
+        self.bn2 = nn.BatchNorm2d(64)
+        self.pool = nn.MaxPool2d(kernel_size=(2, 2), padding=1)
+        self.fc1 = nn.Linear(64 * 8 * 8, 512)
+        self.fc2 = nn.Linear(512, num_classes)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """expect input of size [N, 1/3, 28, 28]."""
+        # x -> conv1 -> ReLu -> Pool -> conv -> Relu -> Pool -> fc1 -> Relu -> fc2 -> loss
+        # conv1.weight -> conv1.bias -> conv2.weight -> conv2.bias -> fc1.weight -> fc2.bias -> fc2.weight -> fc2.bias (all gradients)
+        output_tensor = F.relu(self.bn1(self.conv1(x)))
+        output_tensor = self.pool(output_tensor)
+        output_tensor = F.relu(self.bn2(self.conv2(output_tensor)))
+        output_tensor = self.pool(output_tensor)
+        output_tensor = nn.Flatten()(output_tensor)
+        output_tensor = F.relu(self.fc1(output_tensor))
+        output_tensor = self.fc2(output_tensor)
+        return output_tensor  # (batch_size, num_classes)
+
+
+class custom_deeper_McMahan_CNN(nn.Module):
     """Convolutional Neural Network architecture as described in McMahan 2017
     paper :
     [Communication-Efficient Learning of Deep Networks from
@@ -115,7 +151,7 @@ class deeper_McMahan_CNN(nn.Module):
         return output_tensor
 
 
-class LeNet_smooth(nn.Module):
+class custom_LeNet_smooth(nn.Module):
     """modified to handle EMNIST Balanced Images."""
 
     def __init__(self, num_classes=10, is_gray=True):
@@ -146,7 +182,7 @@ class LeNet_smooth(nn.Module):
         return out
 
 
-class smooth_AlexNet(nn.Module):
+class custom_smooth_AlexNet(nn.Module):
     def __init__(self, num_classes=1000, is_gray=False):
         self.input_shape = torch.Size([3, 224, 224])
         self.output_shape = torch.Size([num_classes])
@@ -192,7 +228,7 @@ def weights_init(m):
         m.bias.data.uniform_(-0.5, 0.5)
 
 
-class LeNet(nn.Module):
+class custom_LeNet_fromDLG(nn.Module):
     def __init__(self, num_classes=10):
         super().__init__()
         act = nn.Sigmoid
@@ -269,6 +305,10 @@ class Bottleneck(nn.Module):
 
 class ResNet(nn.Module):
     def __init__(self, block, num_blocks, num_classes=10, is_gray=False):
+        """
+        activation: sigmoid
+        BatchNorm2d: True
+        """
         super(ResNet, self).__init__()
         self.in_planes = 64
         if is_gray:
@@ -303,7 +343,7 @@ class ResNet(nn.Module):
         return out
 
 
-class ResNet18(ResNet):
+class custom_ResNet18(ResNet):
     """
     torchsummary.summary(ResNet18(num_classes=10), input_size=(3,28,28))
     ================================================================
@@ -326,27 +366,27 @@ class ResNet18(ResNet):
             self.input_shape = torch.Size([3, 28, 28])
 
 
-class ResNet34(ResNet):
+class custom_ResNet34(ResNet):
     def __init__(self, num_classes=10, is_gray=False):
         super().__init__(BasicBlock, [3, 4, 6, 3], num_classes, is_gray)
 
 
-class ResNet50(ResNet):
+class custom_ResNet50(ResNet):
     def __init__(self, num_classes=10, is_gray=False):
         super().__init__(Bottleneck, [3, 4, 6, 3], num_classes, is_gray)
 
 
-class ResNet101(ResNet):
+class custom_ResNet101(ResNet):
     def __init__(self, num_classes=10, is_gray=False):
         super().__init__(Bottleneck, [3, 4, 23, 3], num_classes, is_gray)
 
 
-class ResNet152(ResNet):
+class custom_ResNet152(ResNet):
     def __init__(self, num_classes=10, is_gray=False):
         super().__init__(Bottleneck, [3, 8, 36, 3], num_classes, is_gray)
 
 
-class AlexNet(nn.Module):
+class custom_AlexNet(nn.Module):
     def __init__(self, num_classes=10, *args, **kwargs):
         super().__init__()
         self.net = models.AlexNet(num_classes=num_classes)

@@ -218,9 +218,7 @@ def overview(server, user, attacker):
     print(attacker)
 
 
-def save_reconstruction(
-    reconstructed_user_data, server_payload, true_user_data, cfg, side_by_side=True, target_indx=None
-):
+def save_reconstruction(reconstructed_user_data, server_payload, true_user_data, cfg, side_by_side=True, target_indx=None):
     """If target_indx is not None, only the datapoints at target_indx will be saved to file."""
     os.makedirs("reconstructions", exist_ok=True)
     metadata = server_payload[0]["metadata"]
@@ -238,9 +236,7 @@ def save_reconstruction(
             text_rec = text_rec[target_indx]
             text_ref = text_ref[target_indx]
 
-        filepath = os.path.join(
-            "reconstructions", f"text_rec_{cfg.case.data.name}_{cfg.case.model}_user{cfg.case.user.user_idx}.txt"
-        )
+        filepath = os.path.join("reconstructions", f"text_rec_{cfg.case.data.name}_{cfg.case.model}_user{cfg.case.user.user_idx}.txt")
 
         with open(filepath, "w") as f:
             f.writelines(text_rec)

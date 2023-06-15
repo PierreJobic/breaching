@@ -33,11 +33,14 @@ def main_process(process_idx, local_group_size, cfg, num_trials=100):
     attacker = breaching.attacks.prepare_attack(model, loss_fn, cfg.attack, setup)
     if cfg.case.user.user_idx is not None:
         print("The argument user_idx is disregarded during the benchmark. Data selection is fixed.")
-    log.info(f"Partitioning is set to {cfg.case.data.partition}. Make sure there exist {num_trials} users in this scheme.")
+    log.info(
+        f"Partitioning is set to {cfg.case.data.partition}. Make sure there exist {num_trials} users in this scheme."
+    )
 
     cfg.case.user.user_idx = -1
     run = 0
     overall_metrics = []
+    once_print_overview = True
     while run < num_trials:
         local_time = time.time()
         # Select data that has not been seen before:
@@ -55,6 +58,11 @@ def main_process(process_idx, local_group_size, cfg, num_trials=100):
         if len(user.dataloader.dataset) < user.num_data_points or data_shape_mismatch:
             log.info(f"Skipping user {user.user_idx} (has not enough data or data shape mismatch).")
         else:
+            if once_print_overview:
+                # Summarize startup:
+                breaching.utils.overview(server, user, attacker)
+                once_print_overview = False
+
             log.info(f"Now evaluating user {user.user_idx} in trial {run}.")
             run += 1
             # Run exchange
@@ -63,7 +71,9 @@ def main_process(process_idx, local_group_size, cfg, num_trials=100):
             with open_dict(cfg):
                 cfg.case.data.vocab_size = 100  # otherwise there is an error
             try:
-                reconstruction, stats = attacker.reconstruct(payloads, shared_user_data, server.secrets, dryrun=cfg.dryrun)
+                reconstruction, stats = attacker.reconstruct(
+                    payloads, shared_user_data, server.secrets, dryrun=cfg.dryrun
+                )
 
                 # Run the full set of metrics:
                 metrics = breaching.analysis.report(
@@ -96,7 +106,9 @@ def main_process(process_idx, local_group_size, cfg, num_trials=100):
     average_metrics = breaching.utils.avg_n_dicts(overall_metrics)
 
     # Save global summary:
-    breaching.utils.save_summary(cfg, average_metrics, stats, time.time() - total_time, original_cwd=True, table_name="BENCHMARK_breach")
+    breaching.utils.save_summary(
+        cfg, average_metrics, stats, time.time() - total_time, original_cwd=True, table_name="BENCHMARK_breach"
+    )
 
 
 @hydra.main(config_path="breaching/config", config_name="mask_cfg", version_base="1.1")
@@ -115,7 +127,10 @@ def main_launcher(cfg):
     main_process(0, 1, cfg)
 
     log.info("-------------------------------------------------------------")
-    log.info(f"Finished computations {cfg.name} with total train time: " f"{str(datetime.timedelta(seconds=time.time() - launch_time))}")
+    log.info(
+        f"Finished computations {cfg.name} with total train time: "
+        f"{str(datetime.timedelta(seconds=time.time() - launch_time))}"
+    )
     log.info("-----------------Job finished.-------------------------------")
 
 
