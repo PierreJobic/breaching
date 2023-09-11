@@ -23,7 +23,7 @@ class OptimizationPermutationAttacker(OptimizationBasedAttacker):
 
     def _postprocess_text_data(self, reconstructed_user_data):
         """Post-processsing text data to recover tokens is not necessary here.
-           Instead we recover the argmax assignment of the permutation matrix."""
+        Instead we recover the argmax assignment of the permutation matrix."""
         from scipy.optimize import linear_sum_assignment  # Again a lazy import
 
         _, rec_assignment = linear_sum_assignment(reconstructed_user_data["data"].cpu().numpy(), maximize=True)
@@ -71,8 +71,8 @@ class OptimizationPermutationAttacker(OptimizationBasedAttacker):
                 if iteration + 1 == self.cfg.optim.max_iterations or iteration % self.cfg.optim.callback == 0:
                     timestamp = time.time()
                     log.info(
-                        f"| It: {iteration + 1} | Rec. loss: {objective_value.item():2.4f} | "
-                        f" Task loss: {task_loss.item():2.4f} | T: {timestamp - current_wallclock:4.2f}s"
+                        f"| It: {iteration + 1} | Rec. loss: {objective_value.item():2.4e} | "
+                        f" Task loss: {task_loss.item():2.4e} | T: {timestamp - current_wallclock:4.2f}s"
                     )
                     current_wallclock = timestamp
 

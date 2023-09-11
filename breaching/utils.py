@@ -19,6 +19,8 @@ from omegaconf import OmegaConf, open_dict
 
 import logging
 
+log = logging.getLogger(__name__)
+
 
 def system_startup(process_idx, local_group_size, cfg):
     """Decide and print GPU / CPU / hostname info. Generate local distributed setting if running in distr. mode."""
@@ -82,12 +84,20 @@ def initialize_multiprocess_log(cfg):
 
 def save_summary(cfg, metrics, stats, local_time, original_cwd=True, table_name="breach"):
     """Save two summary tables. A detailed table of iterations/loss+acc and a summary of the end results."""
+    location = os.path.join(cfg.original_cwd, "tables") if original_cwd else "tables"
     # 1) detailed table:
-    for step in range(len(stats["train_loss"])):
-        iteration = dict()
-        for key in stats:
-            iteration[key] = stats[key][step] if step < len(stats[key]) else None
-        save_to_table(".", f"{cfg.attack.type}_convergence_results", dryrun=cfg.dryrun, **iteration)
+    restart_cfg = cfg.get("restarts", {})
+    for restart_trial in range(restart_cfg.get("num_trials", 1)):
+        for step in range(len(stats[f"Trial_{restart_trial}_Val"])):
+            iteration = dict(
+                restart_trial=restart_trial,
+                user_idx=cfg.case.user.user_idx,
+                step=step,
+            )
+            for key in stats:
+                if hasattr(stats[key], "__len__"):
+                    iteration[key] = stats[key][step] if step < len(stats[key]) else None
+            save_to_table(location, f"{cfg.attack.type}_convergence_results", dryrun=cfg.dryrun, **iteration)
 
     try:
         local_folder = os.getcwd().split("outputs/")[1]
@@ -115,7 +125,6 @@ def save_summary(cfg, metrics, stats, local_time, original_cwd=True, table_name=
         folder=local_folder,
     )
 
-    location = os.path.join(cfg.original_cwd, "tables") if original_cwd else "tables"
     save_to_table(location, f"{table_name}_{cfg.case.name}_{cfg.case.data.name}_reports", dryrun=cfg.dryrun, **summary)
 
 
@@ -218,7 +227,29 @@ def overview(server, user, attacker):
     print(attacker)
 
 
-def save_reconstruction(reconstructed_user_data, server_payload, true_user_data, cfg, side_by_side=True, target_indx=None):
+def return_overview(server, user, attacker):
+    overview = []
+    num_params, num_buffers = (
+        sum([p.numel() for p in user.model.parameters()]),
+        sum([b.numel() for b in user.model.buffers()]),
+    )
+    target_information = user.num_data_points * torch.as_tensor(server.cfg_data.shape).prod()
+    overview.append(
+        f"Model architecture {user.model.name} loaded with {num_params:,} parameters and {num_buffers:,} buffers."
+    )
+    overview.append(
+        f"Overall this is a data ratio of {server.num_queries * num_params / target_information:7.0f}:1 "
+        f"for target shape {[user.num_data_points, *server.cfg_data.shape]} given that num_queries={server.num_queries}."
+    )
+    overview.append(user.__repr__())
+    overview.append(server.__repr__())
+    overview.append(attacker.__repr__())
+    return overview
+
+
+def save_reconstruction(
+    reconstructed_user_data, server_payload, true_user_data, cfg, side_by_side=True, target_indx=None
+):
     """If target_indx is not None, only the datapoints at target_indx will be saved to file."""
     os.makedirs("reconstructions", exist_ok=True)
     metadata = server_payload[0]["metadata"]
@@ -236,7 +267,9 @@ def save_reconstruction(reconstructed_user_data, server_payload, true_user_data,
             text_rec = text_rec[target_indx]
             text_ref = text_ref[target_indx]
 
-        filepath = os.path.join("reconstructions", f"text_rec_{cfg.case.data.name}_{cfg.case.model}_user{cfg.case.user.user_idx}.txt")
+        filepath = os.path.join(
+            "reconstructions", f"text_rec_{cfg.case.data.name}_{cfg.case.model}_user{cfg.case.user.user_idx}.txt"
+        )
 
         with open(filepath, "w") as f:
             f.writelines(text_rec)

@@ -33,7 +33,9 @@ class OptimizationBasedAttacker(_BaseAttacker):
                 raise ValueError(f"Unknown objective type {self.cfg.objective.type} given.")
             else:
                 self.objective = MaskedGradientLoss(
-                    mask_cfg=self.cfg.objective.mask, gradient_loss_cls=objective_fn(**self.cfg.objective), **self.cfg.objective
+                    mask_cfg=self.cfg.objective.mask,
+                    gradient_loss_cls=objective_fn(**self.cfg.objective),
+                    **self.cfg.objective,
                 )
         else:
             objective_fn = objective_lookup.get(self.cfg.objective.type)
@@ -78,7 +80,9 @@ class OptimizationBasedAttacker(_BaseAttacker):
         candidate_solutions = []
         try:
             for trial in range(self.cfg.restarts.num_trials):
-                candidate_solutions += [self._run_trial(rec_models, shared_data, labels, stats, trial, initial_data, dryrun)]
+                candidate_solutions += [
+                    self._run_trial(rec_models, shared_data, labels, stats, trial, initial_data, dryrun)
+                ]
                 scores[trial] = self._score_trial(candidate_solutions[trial], labels, rec_models, shared_data)
         except KeyboardInterrupt:
             print("Trial procedure manually interruped.")
@@ -131,8 +135,10 @@ class OptimizationBasedAttacker(_BaseAttacker):
                 if iteration + 1 == self.cfg.optim.max_iterations or iteration % self.cfg.optim.callback == 0:
                     timestamp = time.time()
                     log.info(
-                        f"| It: {iteration + 1}/{self.cfg.optim.max_iterations} | Rec. loss: {objective_value.item():2.4f} | "
-                        f" Task loss: {task_loss.item():2.4f} | T: {timestamp - current_wallclock:4.2f}s"
+                        f"| It: {iteration + 1}/{self.cfg.optim.max_iterations}"
+                        f" | Rec. loss: {objective_value.item():2.4e}"
+                        f" | Task loss: {task_loss.item():2.4e}"
+                        f" | T: {timestamp - current_wallclock:4.2f}s"
                     )
                     current_wallclock = timestamp
 
@@ -182,7 +188,9 @@ class OptimizationBasedAttacker(_BaseAttacker):
                         candidate.grad.mul_(self.cfg.optim.grad_clip / (grad_norm + 1e-6))
                 if self.cfg.optim.signed is not None:
                     if self.cfg.optim.signed == "soft":
-                        scaling_factor = 1 - iteration / self.cfg.optim.max_iterations  # just a simple linear rule for now
+                        scaling_factor = (
+                            1 - iteration / self.cfg.optim.max_iterations
+                        )  # just a simple linear rule for now
                         candidate.grad.mul_(scaling_factor).tanh_().div_(scaling_factor)
                     elif self.cfg.optim.signed == "hard":
                         candidate.grad.sign_()

@@ -22,22 +22,32 @@ def _build_dataset_vision(cfg_data, split, can_download=True):
     cfg_data.path = os.path.expanduser(cfg_data.path)
     if cfg_data.name == "CIFAR10":
         dataset = torchvision.datasets.CIFAR10(
-            root=cfg_data.path, train=split == "training", download=can_download, transform=_default_t,
+            root=cfg_data.path,
+            train=split == "training",
+            download=can_download,
+            transform=_default_t,
         )
         dataset.lookup = dict(zip(list(range(len(dataset))), dataset.targets))
     elif cfg_data.name == "CIFAR100":
         dataset = torchvision.datasets.CIFAR100(
-            root=cfg_data.path, train=split == "training", download=can_download, transform=_default_t,
+            root=cfg_data.path,
+            train=split == "training",
+            download=can_download,
+            transform=_default_t,
         )
         dataset.lookup = dict(zip(list(range(len(dataset))), dataset.targets))
     elif cfg_data.name == "ImageNet":
         dataset = torchvision.datasets.ImageNet(
-            root=cfg_data.path, split="train" if "train" in split else "val", transform=_default_t,
+            root=cfg_data.path,
+            split="train" if "train" in split else "val",
+            transform=_default_t,
         )
         dataset.lookup = dict(zip(list(range(len(dataset))), [label for (_, label) in dataset.samples]))
     elif cfg_data.name == "ImageNetAnimals":
         dataset = torchvision.datasets.ImageNet(
-            root=cfg_data.path, split="train" if "train" in split else "val", transform=_default_t,
+            root=cfg_data.path,
+            split="train" if "train" in split else "val",
+            transform=_default_t,
         )
         dataset.lookup = dict(zip(list(range(len(dataset))), [label for (_, label) in dataset.samples]))
         indices = [idx for (idx, label) in dataset.lookup.items() if label < 397]
@@ -46,12 +56,23 @@ def _build_dataset_vision(cfg_data, split, can_download=True):
         dataset.lookup = dict(zip(list(range(len(dataset))), [label for (_, label) in dataset.samples]))
     elif cfg_data.name == "TinyImageNet":
         dataset = TinyImageNet(
-            root=cfg_data.path, split=split, download=can_download, transform=_default_t, cached=True,
+            root=cfg_data.path,
+            split=split,
+            download=can_download,
+            transform=_default_t,
+            cached=True,
         )
         dataset.lookup = dict(zip(list(range(len(dataset))), dataset.targets))
     elif cfg_data.name == "Birdsnap":
         dataset = Birdsnap(root=cfg_data.path, split=split, download=can_download, transform=_default_t)
         dataset.lookup = dict(zip(list(range(len(dataset))), dataset.labels))
+    elif cfg_data.name == "MNIST":
+        dataset = torchvision.datasets.MNIST(
+            root=cfg_data.path,
+            train="train" if "train" in split else "val",
+            download=can_download,
+            transform=_default_t,
+        )
     else:
         raise ValueError(f"Invalid dataset {cfg_data.name} provided.")
 
@@ -188,7 +209,7 @@ def _get_meanstd(dataset):
         n += n_b
         delta = dm.to(dtype=torch.double) - current_mean
         current_mean += delta * n_b / n
-        current_M2 += ds.to(dtype=torch.double) / (n_b - 1) + delta ** 2 * n_a * n_b / n
+        current_M2 += ds.to(dtype=torch.double) / (n_b - 1) + delta**2 * n_a * n_b / n
         # print(current_mean, (current_M2 / (n - 1)).sqrt())
 
     data_mean = current_mean.tolist()

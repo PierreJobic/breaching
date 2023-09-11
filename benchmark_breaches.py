@@ -40,6 +40,7 @@ def main_process(process_idx, local_group_size, cfg, num_trials=100):
     cfg.case.user.user_idx = -1
     run = 0
     overall_metrics = []
+    once_print_overview = True
     while run < num_trials:
         local_time = time.time()
         # Select data that has not been seen before:
@@ -57,6 +58,12 @@ def main_process(process_idx, local_group_size, cfg, num_trials=100):
         if len(user.dataloader.dataset) < user.num_data_points or data_shape_mismatch:
             log.info(f"Skipping user {user.user_idx} (has not enough data or data shape mismatch).")
         else:
+            if once_print_overview:
+                # Summarize startup:
+                overview = breaching.utils.return_overview(server, user, attacker)
+                print(overview)
+                log.info(overview)
+                once_print_overview = False
             log.info(f"Now evaluating user {user.user_idx} in trial {run}.")
             run += 1
             # Run exchange

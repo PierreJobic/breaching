@@ -75,7 +75,9 @@ def main_process(process_idx, local_group_size, cfg, cfg_flprocess=None, num_tri
         else:
             if once_print_overview:
                 # Summarize startup:
-                breaching.utils.overview(server, user, attacker)
+                overview = breaching.utils.return_overview(server, user, attacker)
+                print(overview)
+                log.info(overview)
                 once_print_overview = False
 
             log.info(f"Now evaluating user {user.user_idx} in trial {run}.")

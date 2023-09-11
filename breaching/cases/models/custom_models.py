@@ -14,7 +14,7 @@ class custom_McMahan_CNN(nn.Module):
     Expected input_size: [N,C,28,28]
     """
 
-    def __init__(self, num_classes=10, is_gray=False) -> None:
+    def __init__(self, num_classes=10, is_gray=True) -> None:
         super().__init__()
         if is_gray:
             self.conv1 = nn.Conv2d(1, 32, 5, padding=1)
@@ -265,7 +265,8 @@ class BasicBlock(nn.Module):
         self.shortcut = nn.Sequential()
         if stride != 1 or in_planes != self.expansion * planes:
             self.shortcut = nn.Sequential(
-                nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=stride, bias=False), nn.BatchNorm2d(self.expansion * planes)
+                nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(self.expansion * planes),
             )
 
     def forward(self, x):
@@ -291,7 +292,8 @@ class Bottleneck(nn.Module):
         self.shortcut = nn.Sequential()
         if stride != 1 or in_planes != self.expansion * planes:
             self.shortcut = nn.Sequential(
-                nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=stride, bias=False), nn.BatchNorm2d(self.expansion * planes)
+                nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(self.expansion * planes),
             )
 
     def forward(self, x):

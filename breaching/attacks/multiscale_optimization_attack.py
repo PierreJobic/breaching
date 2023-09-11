@@ -33,7 +33,7 @@ class MultiScaleOptimizationAttacker(OptimizationBasedAttacker):
             increment = self.data_shape[2] // self.cfg.num_stages
             scale_pyramid = torch.arange(increment, self.data_shape[2] + 1, increment)
         elif self.cfg.scale_pyramid == "log":
-            scales = torch.as_tensor([self.data_shape[2] / (2 ** i) for i in range(self.cfg.num_stages - 1, -1, -1)])
+            scales = torch.as_tensor([self.data_shape[2] / (2**i) for i in range(self.cfg.num_stages - 1, -1, -1)])
             scale_pyramid = scales.round().int()
         elif self.cfg.scale_pyramid == "trivial":
             scale_pyramid = [self.data_shape[2] for _ in range(self.cfg.num_stages)]
@@ -93,8 +93,8 @@ class MultiScaleOptimizationAttacker(OptimizationBasedAttacker):
                 if iteration + 1 == self.cfg.optim.max_iterations or iteration % self.cfg.optim.callback == 0:
                     timestamp = time.time()
                     log.info(
-                        f"| S: {stage} - It: {iteration + 1} | Rec. loss: {objective_value.item():2.4f} | "
-                        f" Task loss: {task_loss.item():2.4f} | T: {timestamp - current_wallclock:4.2f}s"
+                        f"| S: {stage} - It: {iteration + 1} | Rec. loss: {objective_value.item():2.4e} | "
+                        f" Task loss: {task_loss.item():2.4e} | T: {timestamp - current_wallclock:4.2f}s"
                     )
                     current_wallclock = timestamp
 

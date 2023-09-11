@@ -238,7 +238,7 @@ def _run_vision_metrics(
         order = None
 
     mse_score = (rec_denormalized - ground_truth_denormalized).pow(2).mean(dim=[1, 2, 3])
-    avg_mse, max_mse = mse_score.mean().item(), mse_score.max().item()
+    avg_mse, max_mse, min_mse = mse_score.mean().item(), mse_score.max().item(), mse_score.min().item()
     avg_psnr, max_psnr = psnr_compute(rec_denormalized, ground_truth_denormalized, factor=1)
     avg_ssim, max_ssim = cw_ssim(rec_denormalized, ground_truth_denormalized, scales=5)
 
@@ -253,7 +253,7 @@ def _run_vision_metrics(
         avg_rpsnr, max_rpsnr = float("nan"), float("nan")
 
     # Compute IIP score if data config is passed:
-    if cfg_case is not None:
+    if cfg_case is not None and cfg_case.get("compute_iip", False):
         dataloader = construct_dataloader(cfg_case.data, cfg_case.impl, user_idx=None, return_full_dataset=True)
         if compute_full_iip:
             scores = ["pixel", "lpips", "self"]
@@ -271,6 +271,10 @@ def _run_vision_metrics(
         lpips=avg_lpips,
         rpsnr=avg_rpsnr,
         ssim=avg_ssim,
+        min_mse=min_mse,
+        max_mse=max_mse,
+        max_psnr=max_psnr,
+        max_lpips=max_lpips,
         max_ssim=max_ssim,
         max_rpsnr=max_rpsnr,
         order=order,
@@ -381,8 +385,8 @@ def compute_text_order(reconstructed_user_data, true_user_data, vocab_size):
     """Simple text ordering based just on token overlap."""
     B = reconstructed_user_data["data"].shape[0]
     overlaps = torch.zeros(B, B, device=true_user_data["data"].device)
-    for (idx, rec_sentence) in enumerate(reconstructed_user_data["data"]):
-        for (idy, ref_sentence) in enumerate(true_user_data["data"]):
+    for idx, rec_sentence in enumerate(reconstructed_user_data["data"]):
+        for idy, ref_sentence in enumerate(true_user_data["data"]):
             overlap = count_integer_overlap(rec_sentence, ref_sentence, maxlength=vocab_size)
             overlaps[idx, idy] = overlap
     try:

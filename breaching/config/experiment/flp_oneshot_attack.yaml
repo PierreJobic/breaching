@@ -1,0 +1,23 @@
+# @package _global_
+# These settings govern the total amount of user data and how it is used over multiple local update steps:
+# cfg.case.user.num_data_points = 4
+# cfg.case.user.num_local_updates = 4
+# cfg.case.user.num_data_per_local_update_step = 2
+# ${int(range(1, 100, 5)}
+root_model_path: /volatile/home/pj273170/Code/FLPrivacy/outputs/default/2023-06-21/10-16-51
+load_model_path: ${root_model_path}/model_round_${load_round}.pth
+
+defaults:
+  - override /case/user: local_updates
+  - _self_
+  # - override /hydra/launcher: joblib
+
+case:
+  user:
+    num_data_points: ${paired.a}
+    num_data_per_local_update_step: ${paired.b}
+    num_local_updates: ${paired.c}
+    local_learning_rate: 0.01 # Same as in my FLPrivacy Config
+
+load_round: 100
+paired: {a: 100, b: 20, c: 5}

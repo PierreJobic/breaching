@@ -1,4 +1,7 @@
+# Special directories
 outputs
+wandb
+
 tables/*/*.csv
 tables/*/*.csv#
 tables/*.csv
