@@ -13,10 +13,10 @@ import hydra
 """Construct interfaces to cfg folders for use in packaged installations:"""
 
 
-def get_config(overrides=[]):
+def get_config(config_name="cfg", overrides=[]):
     """Return default hydra config."""
     with hydra.initialize(config_path="config", version_base="1.1"):
-        cfg = hydra.compose(config_name="cfg", overrides=overrides)
+        cfg = hydra.compose(config_name=config_name, overrides=overrides)
         print(f"Investigating use case {cfg.case.name} with server type {cfg.case.server.name}.")
     return cfg
 

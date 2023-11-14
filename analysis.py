@@ -116,6 +116,7 @@ def plot_2d_df(
     df["sparsity"] = df["ATK_objective"].str.extract(r"'sparsity': (\d+\.\d+)")
     df["sparsity"] = df["sparsity"].fillna("0.0")
     df["batch_size"] = df["datapoints"]
+    df["optimizer_type"] = df["ATK_optim"].str.extract(r"{'optimizer': '(.+?)'")
     for key, value_tab in squeeze_dict.items():
         for val_1, val_2 in value_tab:
             df[key] = df[key].replace(val_1, val_2)
@@ -131,6 +132,10 @@ def plot_2d_df(
     y_list = np.unique(df[y_axis])
     nb_y = len(y_list)
 
+    # all_same_loss = np.array([("ssim" in loss) for loss in loss_list]).all()
+    all_same_loss = False
+    keyword_values_dict = {}
+    keyword_values_total = 0
     for loss in loss_list:
         print(f"model: {model_list}")
         print(f"number of total experiment: {nb_experiment}")
@@ -139,21 +144,37 @@ def plot_2d_df(
         print(f"number of experiment for each ({x_axis}&{y_axis}): {nb_experiment / (nb_x * nb_y)}")
         if isinstance(y_axis, str):
             y_axis = [y_axis]
-        grouped_df = df.groupby([x_axis, *y_axis])[loss].agg(metric_list)
 
         # Group by keywords dynamically
         grouped_df = df.groupby([x_axis, *y_axis])[loss].agg(metric_list)
 
+        # Extract the unique values for each keyword
+        keyword_values_dict[loss] = np.stack(np.meshgrid(*[np.unique(df[y_ax]) for y_ax in y_axis]), -1).reshape(
+            -1, len(y_axis)
+        )
+        keyword_values_total += len(keyword_values_dict[loss])
+    if all_same_loss:
         fig = plt.figure(figsize=(24, 12), dpi=80)
         if len(metric_list) == 1:
             ax = [fig.add_subplot(111)]
         elif len(metric_list) == 2:
             ax = [fig.add_subplot(121), fig.add_subplot(122)]
-        # Extract the unique values for each keyword
-        keyword_values = np.stack(np.meshgrid(*[np.unique(df[y_ax]) for y_ax in y_axis]), -1).reshape(-1, len(y_axis))
+        j = 0
+        color = cm.viridis(np.linspace(0, 1, 2 * keyword_values_total))
+        print(f"keyword_values_total: {keyword_values_total}")
+    for loss, keyword_values in zip(loss_list, keyword_values_dict.values()):
+        if not all_same_loss:
+            fig = plt.figure(figsize=(24, 12), dpi=80)
+            if len(metric_list) == 1:
+                ax = [fig.add_subplot(111)]
+            elif len(metric_list) == 2:
+                ax = [fig.add_subplot(121), fig.add_subplot(122)]
+        # Group by keywords dynamically
+        grouped_df = df.groupby([x_axis, *y_axis])[loss].agg(metric_list)
         for i, metric in enumerate(metric_list):
-            color = cm.viridis(np.linspace(0, 1, len(keyword_values)))
-            j = 0
+            if not all_same_loss:
+                color = cm.viridis(np.linspace(0, 1, len(keyword_values)))
+                j = 0
             # Create a separate plot for each keyword combination
             for keyword_value_pairs in keyword_values:
                 # Filter the grouped dataframe for each keyword combination
@@ -165,18 +186,32 @@ def plot_2d_df(
                         ]
                     )
                 ]
-                legend = " and ".join(f"{y_ax}={kw}" for y_ax, kw in zip(y_axis, keyword_value_pairs))
-                ax[i].plot(
-                    df_kw[metric].index.get_level_values(x_axis),
-                    df_kw[metric].values,
-                    marker="o",
-                    color=color[j],
-                    label=legend,
-                )
-                j += 1
+                if len(df_kw[metric].values) > 0:
+                    legend = " and ".join(f"{loss}: {y_ax}={kw}" for y_ax, kw in zip(y_axis, keyword_value_pairs))
+                    x_values = df_kw[metric].index.get_level_values(x_axis)
+                    ax[i].plot(
+                        x_values,
+                        df_kw[metric].values,
+                        marker="o",
+                        # linestyle="dashed",
+                        color=color[j],
+                        label=legend,
+                    )
+                    j += 1
+            # if loss == "ssim":
+            #     ax[i].hlines(0.3, min(x_values), max(x_values), colors="black", linestyles="dotted")
+            if not all_same_loss:
+                ax[i].set_xlabel(x_axis)
+                ax[i].set_ylabel(loss)
+                ax[i].set_title(f"{metric}: {loss} vs. {x_axis}")
+                ax[i].legend()
+        if not all_same_loss:
+            plt.show()
+    if all_same_loss:
+        for i in range(len(metric_list)):
             ax[i].set_xlabel(x_axis)
-            ax[i].set_ylabel(loss)
-            ax[i].set_title(f"{metric}: {loss} vs. {x_axis}")
+            ax[i].set_ylabel("ssim")
+            ax[i].set_title(f"{metric_list[i]}: ssim vs. {x_axis}")
             ax[i].legend()
         plt.show()
 

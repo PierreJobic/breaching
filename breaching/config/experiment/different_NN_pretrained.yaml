@@ -1,0 +1,19 @@
+# @package _global_
+
+# defaults:
+#   - override /hydra/launcher: joblib
+#   - _self_
+
+# Using GPU
+case:
+  impl:
+    enable_gpu_acc: True
+
+hydra:
+  sweep:
+    subdir: ${hydra.job.num}_${case.model}_${case.user.num_data_points}
+  sweeper:
+    params:
+      case.model: cifar10_resnet18
+      case.user.num_data_points: 16
+      case.server.pretrained: True,False

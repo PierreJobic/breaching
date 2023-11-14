@@ -4,6 +4,29 @@ import torch.nn.functional as F
 
 from torchvision import models
 
+import sys
+
+sys.path.append("/volatile/home/pj273170/Code/PyTorch_CIFAR10")
+from cifar10_models.vgg import (
+    vgg11_bn as cifar10_vgg11_bn,
+    vgg13_bn as cifar10_vgg13_bn,
+    vgg16_bn as cifar10_vgg16_bn,
+    vgg19_bn as cifar10_vgg19_bn,
+)
+from cifar10_models.resnet import (
+    resnet18 as cifar10_resnet18,
+    resnet34 as cifar10_resnet34,
+    resnet50 as cifar10_resnet50,
+)
+from cifar10_models.densenet import (
+    densenet121 as cifar10_densenet121,
+    densenet161 as cifar10_densenet161,
+    densenet169 as cifar10_densenet169,
+)
+from cifar10_models.mobilenetv2 import mobilenet_v2 as cifar10_mobilenet_v2
+from cifar10_models.googlenet import googlenet as cifar10_googlenet
+from cifar10_models.inception import inception_v3 as cifar10_inception_v3
+
 
 class custom_McMahan_CNN(nn.Module):
     """Convolutional Neural Network architecture as described in McMahan 2017
@@ -63,7 +86,8 @@ class custom_McMahan_32_32(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """expect input of size [N, 1/3, 28, 28]."""
         # x -> conv1 -> ReLu -> Pool -> conv -> Relu -> Pool -> fc1 -> Relu -> fc2 -> loss
-        # conv1.weight -> conv1.bias -> conv2.weight -> conv2.bias -> fc1.weight -> fc2.bias -> fc2.weight -> fc2.bias (all gradients)
+        # conv1.weight -> conv1.bias -> conv2.weight -> conv2.bias -> fc1.weight -> fc2.bias ->
+        # fc2.weight -> fc2.bias (all gradients)
         output_tensor = F.relu(self.conv1(x))
         output_tensor = self.pool(output_tensor)
         output_tensor = F.relu(self.conv2(output_tensor))

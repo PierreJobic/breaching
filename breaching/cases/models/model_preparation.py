@@ -242,8 +242,15 @@ def _construct_vision_model(cfg_model, cfg_data, pretrained=True, **kwargs):
             else:
                 raise ValueError(f"Could not find ImageNet model {cfg_model} in torchvision.models or custom models.")
     else:
+        if "custom" in cfg_model.lower():
+            model_cls = getattr(custom_models, cfg_model)
+            model = model_cls(num_classes=classes)
+        elif "cifar10" in cfg_model.lower():
+            model_cls = getattr(custom_models, cfg_model)
+            model = model_cls(pretrained=pretrained)
+            print("B")
         # CIFAR Model from here:
-        if "resnetgn" in cfg_model.lower():
+        elif "resnetgn" in cfg_model.lower():
             block, layers = resnet_depths_to_config(int("".join(filter(str.isdigit, cfg_model))))
             model = ResNet(
                 block,
