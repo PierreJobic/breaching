@@ -2,6 +2,7 @@
 outputs
 wandb
 
+breaching/config/slurm
 tables/*/*.csv
 tables/*/*.csv#
 tables/*.csv

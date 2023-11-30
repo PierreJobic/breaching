@@ -6,7 +6,7 @@ from torchvision import models
 
 import sys
 
-sys.path.append("/volatile/home/pj273170/Code/PyTorch_CIFAR10")
+sys.path.append("/home/users/pjobic/dev/PyTorch_CIFAR10")
 from cifar10_models.vgg import (
     vgg11_bn as cifar10_vgg11_bn,
     vgg13_bn as cifar10_vgg13_bn,
