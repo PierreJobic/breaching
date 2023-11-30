@@ -14,7 +14,7 @@ case:
   user:
     num_data_points: ${paired.a}
     num_data_per_local_update_step: ${paired.b}
-    num_local_updates: ${multiply: ${paired.c}, ${pared_num_epochs}}
+    num_local_updates: "${multiply: ${paired.c}, ${paired_num_epochs}}"
 
 paired: {a: null, b: null, c: null}
 paired_num_epochs: 5
