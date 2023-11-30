@@ -22,9 +22,11 @@ log = logging.getLogger(__name__)
 def resolve_tuple(*args):
     return tuple(args)
 
+def multiply(a, b):
+    return a*b
 
 OmegaConf.register_new_resolver("as_tuple", resolve_tuple)
-
+Omegaconf.register_new_resolver("multiply", multiply)
 
 def main_process(process_idx, local_group_size, cfg, num_trials=100):
     """This function controls the central routine."""
