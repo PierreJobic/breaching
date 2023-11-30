@@ -48,7 +48,10 @@ class custom_McMahan_CNN(nn.Module):
         self.output_shape = torch.Size([num_classes])
         self.conv2 = nn.Conv2d(32, 64, 5, padding=1)
         self.pool = nn.MaxPool2d(kernel_size=(2, 2), padding=1)
-        self.fc1 = nn.Linear(64 * 7 * 7, 512)
+        if is_gray:
+            self.fc1 = nn.Linear(64 * 8 * 8, 512)
+        else:
+            self.fc1 = nn.Linear(64 * 7 * 7, 512)
         self.fc2 = nn.Linear(512, num_classes)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -80,7 +83,10 @@ class custom_McMahan_32_32(nn.Module):
         self.output_shape = torch.Size([num_classes])
         self.conv2 = nn.Conv2d(32, 64, 5, padding=1)
         self.pool = nn.MaxPool2d(kernel_size=(2, 2), padding=1)
-        self.fc1 = nn.Linear(64 * 8 * 8, 512)
+        if not is_gray:
+            self.fc1 = nn.Linear(64 * 8 * 8, 512)
+        else:
+            self.fc1 = nn.Linear(64 * 7 * 7, 512)
         self.fc2 = nn.Linear(512, num_classes)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

@@ -107,6 +107,8 @@ def plot_2d_df(
     loss_list=["mse", "ssim", "psnr"],
     metric_list=["mean", "var"],
     squeeze_dict={"mask_type": [("no_mask", "mask_sparsity_quantile")]},
+    plot_style="plot",
+    group_by=True,
 ):
     df = copy.deepcopy(filtered_df)
     # Extraire les valeurs de b et c de la colonne 'col3'
@@ -146,7 +148,10 @@ def plot_2d_df(
             y_axis = [y_axis]
 
         # Group by keywords dynamically
-        grouped_df = df.groupby([x_axis, *y_axis])[loss].agg(metric_list)
+        if group_by:
+            grouped_df = df.groupby([x_axis, *y_axis])[loss].agg(metric_list)
+        else:
+            grouped_df = df
 
         # Extract the unique values for each keyword
         keyword_values_dict[loss] = np.stack(np.meshgrid(*[np.unique(df[y_ax]) for y_ax in y_axis]), -1).reshape(
@@ -170,7 +175,10 @@ def plot_2d_df(
             elif len(metric_list) == 2:
                 ax = [fig.add_subplot(121), fig.add_subplot(122)]
         # Group by keywords dynamically
-        grouped_df = df.groupby([x_axis, *y_axis])[loss].agg(metric_list)
+        if group_by:
+            grouped_df = df.groupby([x_axis, *y_axis])[loss].agg(metric_list)
+        else:
+            grouped_df = df
         for i, metric in enumerate(metric_list):
             if not all_same_loss:
                 color = cm.viridis(np.linspace(0, 1, len(keyword_values)))
@@ -178,26 +186,43 @@ def plot_2d_df(
             # Create a separate plot for each keyword combination
             for keyword_value_pairs in keyword_values:
                 # Filter the grouped dataframe for each keyword combination
-                df_kw = grouped_df[
-                    np.logical_and.reduce(
-                        [
-                            (grouped_df.index.get_level_values(y_ax) == kw)
-                            for y_ax, kw in zip(y_axis, keyword_value_pairs)
-                        ]
-                    )
-                ]
+                if group_by:
+                    df_kw = grouped_df[
+                        np.logical_and.reduce(
+                            [
+                                (grouped_df.index.get_level_values(y_ax) == kw)
+                                for y_ax, kw in zip(y_axis, keyword_value_pairs)
+                            ]
+                        )
+                    ]
+                else:
+                    pass
                 if len(df_kw[metric].values) > 0:
                     legend = " and ".join(f"{loss}: {y_ax}={kw}" for y_ax, kw in zip(y_axis, keyword_value_pairs))
                     x_values = df_kw[metric].index.get_level_values(x_axis)
-                    ax[i].plot(
-                        x_values,
-                        df_kw[metric].values,
-                        marker="o",
-                        # linestyle="dashed",
-                        color=color[j],
-                        label=legend,
-                    )
-                    j += 1
+                    if plot_style == "plot":
+                        ax[i].plot(
+                            x_values,
+                            df_kw[metric].values,
+                            marker="o",
+                            # linestyle="dashed",
+                            color=color[j],
+                            label=legend,
+                        )
+                        j += 1
+                    elif plot_style == "scatter":
+                        ax[i].scatter(
+                            x_values,
+                            df_kw[metric].values,
+                            marker="o",
+                            # linestyle="dashed",
+                            color=color[j],
+                            label=legend,
+                        )
+                        j += 1
+                    else:
+                        raise ValueError(f"plot_style {plot_style} not recognized")
+
             # if loss == "ssim":
             #     ax[i].hlines(0.3, min(x_values), max(x_values), colors="black", linestyles="dotted")
             if not all_same_loss:

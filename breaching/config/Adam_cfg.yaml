@@ -11,8 +11,9 @@ base_dir: outputs
 hydra:
   sweep:
     dir: ${base_dir}/${name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}_${hydra.overrides.task}
   run:
-    dir: ${base_dir}/${name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    dir: ${base_dir}/${name}/${now:%Y-%m-%d}/${now:%H-%M-%S}/${hydra.overrides.task}
 # To change output folder location:
 # Set hydra.output_subdir=something
 # searchpath:
@@ -31,6 +32,12 @@ save_reconstruction: True
 
 # When loading model from checkpoint:
 load_model_path: None
+
+attack:
+  optim:
+    stopping:
+      patience: 100
+      min_delta: 0.05
 
 # Using GPU
 case:

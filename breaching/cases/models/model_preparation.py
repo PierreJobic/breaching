@@ -244,6 +244,7 @@ def _construct_vision_model(cfg_model, cfg_data, pretrained=True, **kwargs):
     else:
         if "custom" in cfg_model.lower():
             model_cls = getattr(custom_models, cfg_model)
+            is_gray = cfg_data.shape[0] == 1
             model = model_cls(num_classes=classes)
         elif "cifar10" in cfg_model.lower():
             model_cls = getattr(custom_models, cfg_model)
