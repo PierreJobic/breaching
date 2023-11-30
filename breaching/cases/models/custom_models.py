@@ -6,26 +6,26 @@ from torchvision import models
 
 import sys
 
-sys.path.append("/home/users/pjobic/dev/PyTorch_CIFAR10")
-from cifar10_models.vgg import (
-    vgg11_bn as cifar10_vgg11_bn,
-    vgg13_bn as cifar10_vgg13_bn,
-    vgg16_bn as cifar10_vgg16_bn,
-    vgg19_bn as cifar10_vgg19_bn,
-)
-from cifar10_models.resnet import (
-    resnet18 as cifar10_resnet18,
-    resnet34 as cifar10_resnet34,
-    resnet50 as cifar10_resnet50,
-)
-from cifar10_models.densenet import (
-    densenet121 as cifar10_densenet121,
-    densenet161 as cifar10_densenet161,
-    densenet169 as cifar10_densenet169,
-)
-from cifar10_models.mobilenetv2 import mobilenet_v2 as cifar10_mobilenet_v2
-from cifar10_models.googlenet import googlenet as cifar10_googlenet
-from cifar10_models.inception import inception_v3 as cifar10_inception_v3
+# sys.path.append("/home/users/pjobic/dev/PyTorch_CIFAR10")
+# from cifar10_models.vgg import (
+#     vgg11_bn as cifar10_vgg11_bn,
+#     vgg13_bn as cifar10_vgg13_bn,
+#     vgg16_bn as cifar10_vgg16_bn,
+#     vgg19_bn as cifar10_vgg19_bn,
+# )
+# from cifar10_models.resnet import (
+#     resnet18 as cifar10_resnet18,
+#     resnet34 as cifar10_resnet34,
+#     resnet50 as cifar10_resnet50,
+# )
+# from cifar10_models.densenet import (
+#     densenet121 as cifar10_densenet121,
+#     densenet161 as cifar10_densenet161,
+#     densenet169 as cifar10_densenet169,
+# )
+# from cifar10_models.mobilenetv2 import mobilenet_v2 as cifar10_mobilenet_v2
+# from cifar10_models.googlenet import googlenet as cifar10_googlenet
+# from cifar10_models.inception import inception_v3 as cifar10_inception_v3
 
 
 class custom_McMahan_CNN(nn.Module):

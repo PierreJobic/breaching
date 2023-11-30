@@ -137,6 +137,7 @@ def main_launcher(cfg):
     if cfg.seed is None:
         cfg.seed = 233  # The benchmark seed is fixed by default!
 
+    OmegaConf.resolve(cfg)
     log.info(OmegaConf.to_yaml(cfg))
     breaching.utils.initialize_multiprocess_log(cfg)  # manually save log configuration
     main_process(0, 1, cfg)
