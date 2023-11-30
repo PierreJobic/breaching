@@ -8,6 +8,8 @@ from ..cases import construct_dataloader
 import copy
 import logging
 
+from ..cases.models.losses import CausalLoss, MLMLoss, MostlyCausalLoss
+
 log = logging.getLogger(__name__)
 
 
@@ -104,6 +106,80 @@ def report(
         parameters=parameters,
         label_acc=test_label_acc,
     )
+    return metrics
+
+
+def custom_metrics(
+    reconstructed_user_data,
+    true_user_data,
+    server_payload,
+    model_template,
+    loss_fn,
+    cfg_case=None,
+    setup=dict(device=torch.device("cpu"), dtype=torch.float),
+):
+    model = copy.deepcopy(model_template)  # Copy just in case and discard later
+    model.to(**setup)
+    metadata = server_payload[0]["metadata"]
+
+    # Choose loss function according to data and model:
+    cfg_data = cfg_case.data
+    if "classification" in cfg_data.task:
+        loss_fn = torch.nn.CrossEntropyLoss(reduce=False)
+    elif "causal-lm-sanity" in cfg_data.task:
+        loss_fn = MostlyCausalLoss(reduce=False)
+    elif "causal-lm" in cfg_data.task:
+        loss_fn = CausalLoss(reduce=False)
+    elif "masked-lm" in cfg_data.task:
+        loss_fn = MLMLoss(vocab_size=cfg_data.vocab_size, reduce=False)
+    else:
+        raise ValueError(f"No loss function registered for task {cfg_data.task}.")
+
+    # Text or Vision ?
+    if metadata["modality"] == "text":
+        raise NotImplementedError("No custom metrics for text yet.")
+    else:
+        rec_loss = []
+        rec_acc = []
+        for idx, payload in enumerate(server_payload):
+            parameters = payload["parameters"]
+            buffers = payload["buffers"]
+
+            with torch.no_grad():
+                for param, server_state in zip(model.parameters(), parameters):
+                    param.copy_(server_state.to(**setup))
+                if buffers is not None:
+                    for buffer, server_state in zip(model.buffers(), buffers):
+                        buffer.copy_(server_state.to(**setup))
+                else:
+                    if len(true_user_data["buffers"]) > 0:
+                        for buffer, user_state in zip(model.buffers(), true_user_data["buffers"]):
+                            buffer.copy_(user_state.to(**setup))
+
+            # Compute the forward passes:
+            with torch.no_grad():
+                feats_rec = model(reconstructed_user_data["data"].to(device=setup["device"]))
+                feats_true = model(true_user_data["data"].to(device=setup["device"]))
+                relevant_features = true_user_data["labels"]
+
+                # Compute losses:
+                true_loss = loss_fn(feats_true, relevant_features.to(device=setup["device"]))
+                rec_loss.append(loss_fn(feats_rec, relevant_features.to(device=setup["device"])))
+
+                # Compute accuracies:
+                true_acc = (feats_true.argmax(dim=-1) == relevant_features.to(device=setup["device"])).float()
+                rec_acc.append((feats_rec.argmax(dim=-1) == relevant_features.to(device=setup["device"])).float())
+
+        # Compute the average loss:
+        rec_loss = torch.mean(torch.stack(rec_loss), dim=0)
+        rec_acc = torch.mean(torch.stack(rec_acc), dim=0)
+
+        metrics = dict(
+            **{f"{idx}_rec_loss": val.item() for idx, val in enumerate(rec_loss)},
+            **{f"{idx}_rec_acc": val.item() for idx, val in enumerate(rec_acc)},
+            **{f"{idx}_true_loss": val.item() for idx, val in enumerate(true_loss)},
+            **{f"{idx}_true_acc": val.item() for idx, val in enumerate(true_acc)},
+        )
     return metrics
 
 
@@ -216,6 +292,7 @@ def _run_vision_metrics(
 ):
     import lpips  # lazily import this only if vision reporting is used.
 
+    shape = server_payload[0]["metadata"]["shape"]
     lpips_scorer = lpips.LPIPS(net="alex", verbose=False).to(**setup)
 
     metadata = server_payload[0]["metadata"]

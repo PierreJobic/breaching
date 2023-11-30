@@ -8,6 +8,8 @@ and convers subsequent developments such as
 * ?
 """
 
+import numpy as np
+
 import torch
 import time
 
@@ -118,6 +120,11 @@ class OptimizationBasedAttacker(_BaseAttacker):
         # Initialize optimizers
         optimizer, scheduler = self._init_optimizer([candidate])
         current_wallclock = time.time()
+        objective_values = np.zeros(self.cfg.optim.max_iterations)
+        minimal_iteration_so_far = 0
+        # print(len(shared_data))
+        # print(shared_data[0].keys())
+        # print(stats)
         try:
             for iteration in range(self.cfg.optim.max_iterations):
                 closure = self._compute_objective(candidate, labels, rec_model, optimizer, shared_data, iteration)
@@ -125,12 +132,14 @@ class OptimizationBasedAttacker(_BaseAttacker):
                 scheduler.step()
 
                 with torch.no_grad():
+                    objective_values[iteration] = objective_value.detach()
                     # Project into image space
                     if self.cfg.optim.boxed:
                         candidate.data = torch.max(torch.min(candidate, (1 - self.dm) / self.ds), -self.dm / self.ds)
                     if objective_value < minimal_value_so_far:
                         minimal_value_so_far = objective_value.detach()
                         best_candidate = candidate.detach().clone()
+                        minimal_iteration_so_far = iteration
 
                 if iteration + 1 == self.cfg.optim.max_iterations or iteration % self.cfg.optim.callback == 0:
                     timestamp = time.time()
@@ -139,6 +148,7 @@ class OptimizationBasedAttacker(_BaseAttacker):
                         f" | Rec. loss: {objective_value.item():2.4e}"
                         f" | Task loss: {task_loss.item():2.4e}"
                         f" | T: {timestamp - current_wallclock:4.2f}s"
+                        + (" | Checking Early Stopping " if self.cfg.optim.get("stopping", False) else "")
                     )
                     current_wallclock = timestamp
 
@@ -147,6 +157,16 @@ class OptimizationBasedAttacker(_BaseAttacker):
                     break
 
                 stats[f"Trial_{trial}_Val"].append(objective_value.item())
+                stats[f"Trial_{trial}_Task"].append(task_loss.item())
+
+                if self.cfg.optim.get("stopping", False) and self._early_stopping_criterion(
+                    objective_values,
+                    iteration,
+                    minimal_value_so_far,
+                    minimal_iteration_so_far,
+                ):
+                    log.info(f"Early stopping criterion triggered in iteration {iteration}.")
+                    break
 
                 if dryrun:
                     break
@@ -230,3 +250,13 @@ class OptimizationBasedAttacker(_BaseAttacker):
         else:
             log.info("No valid reconstruction could be found.")
             return torch.zeros_like(optimal_solution)
+
+    def _early_stopping_criterion(self, objective_values, iteration, minimal_value_so_far, minimal_iteration_so_far):
+        """Check whether the early stopping criterion is fulfilled"""
+        min_delta = self.cfg.optim.stopping.min_delta
+        patience = self.cfg.optim.stopping.patience
+        if (
+            objective_values[minimal_iteration_so_far : iteration + 1] > (minimal_value_so_far * (1 + min_delta)).item()
+        ).sum() > patience:
+            return True
+        return False

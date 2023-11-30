@@ -223,10 +223,15 @@ def _parse_data_augmentations(cfg_data, split, PIL_only=False):
         list_of_transforms = []
         if hasattr(cfg_dict, "keys"):
             for key in cfg_dict.keys():
-                try:  # ducktype iterable
-                    transform = getattr(torchvision.transforms, key)(*cfg_dict[key])
-                except TypeError:
-                    transform = getattr(torchvision.transforms, key)(cfg_dict[key])
+                if key != "Repeat":
+                    if isinstance(cfg_dict[key], str):
+                        str_key = cfg_dict[key].replace(" ", "")
+                        transform = getattr(torchvision.transforms, key)(tuple(map(int, str_key.split(","))))
+                    else:
+                        try:  # ducktype iterable
+                            transform = getattr(torchvision.transforms, key)(*cfg_dict[key])
+                        except TypeError:
+                            transform = getattr(torchvision.transforms, key)(cfg_dict[key])
                 list_of_transforms.append(transform)
         return list_of_transforms
 
@@ -239,6 +244,7 @@ def _parse_data_augmentations(cfg_data, split, PIL_only=False):
         transforms.append(torchvision.transforms.ToTensor())
         if cfg_data.normalize:
             transforms.append(torchvision.transforms.Normalize(cfg_data.mean, cfg_data.std))
+    transforms.append(torchvision.transforms.Lambda(lambda x: x.repeat(3, 1, 1) if x.size(0) == 1 else x))
     return torchvision.transforms.Compose(transforms)
 
 

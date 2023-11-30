@@ -19,6 +19,13 @@ os.environ["HYDRA_FULL_ERROR"] = "1"
 log = logging.getLogger(__name__)
 
 
+def resolve_tuple(*args):
+    return tuple(args)
+
+
+OmegaConf.register_new_resolver("as_tuple", resolve_tuple)
+
+
 def main_process(process_idx, local_group_size, cfg, num_trials=100):
     """This function controls the central routine."""
     total_time = time.time()  # Rough time measurements here
@@ -70,37 +77,40 @@ def main_process(process_idx, local_group_size, cfg, num_trials=100):
             # Evaluate attack:
             with open_dict(cfg):
                 cfg.case.data.vocab_size = 100  # otherwise there is an error
-            try:
-                reconstruction, stats = attacker.reconstruct(
-                    payloads, shared_user_data, server.secrets, dryrun=cfg.dryrun
-                )
 
-                # Run the full set of metrics:
-                metrics = breaching.analysis.report(
-                    reconstruction,
-                    true_user_data,
-                    payloads,
-                    server.model,
-                    order_batch=True,
-                    compute_full_iip=True,
-                    compute_rpsnr=True,
-                    compute_ssim=True,
-                    cfg_case=cfg.case,
-                    setup=setup,
-                )
-                # Add query metrics
-                metrics["queries"] = user.counted_queries
+            reconstruction, stats = attacker.reconstruct(payloads, shared_user_data, server.secrets, dryrun=cfg.dryrun)
 
-                # Save local summary:
-                breaching.utils.save_summary(cfg, metrics, stats, time.time() - local_time, original_cwd=False)
-                overall_metrics.append(metrics)
-                # Save recovered data:
-                if cfg.save_reconstruction:
-                    breaching.utils.save_reconstruction(reconstruction, payloads, true_user_data, cfg)
-                if cfg.dryrun:
-                    break
-            except Exception as e:  # noqa # yeah we're that close to the deadlines
-                log.info(f"Trial {run} broke down with error {e}.")
+            # Run the full set of metrics:
+            metrics = breaching.analysis.report(
+                reconstruction,
+                true_user_data,
+                payloads,
+                server.model,
+                order_batch=True,
+                compute_full_iip=True,
+                compute_rpsnr=True,
+                compute_ssim=True,
+                cfg_case=cfg.case,
+                setup=setup,
+            )
+
+            # Add custom-made metrics:
+            metrics_custom = breaching.analysis.custom_metrics(
+                reconstruction, true_user_data, payloads, server.model, loss_fn, cfg_case=cfg.case, setup=setup
+            )
+            metrics = {**metrics, **metrics_custom}
+
+            # Add query metrics
+            metrics["queries"] = user.counted_queries
+
+            # Save local summary:
+            breaching.utils.save_summary(cfg, metrics, stats, time.time() - local_time, original_cwd=False)
+            overall_metrics.append(metrics)
+            # Save recovered data:
+            if cfg.save_reconstruction:
+                breaching.utils.save_reconstruction(reconstruction, payloads, true_user_data, cfg)
+            if cfg.dryrun:
+                break
 
     # Compute average statistics:
     average_metrics = breaching.utils.avg_n_dicts(overall_metrics)
