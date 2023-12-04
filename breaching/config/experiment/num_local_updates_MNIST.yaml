@@ -22,5 +22,4 @@ paired_num_epochs: 5
 hydra:
   sweeper:
     params:
-      +load_round: 100
-      +paired: "{a: 256, b: 64, c: 4}, {a: 256, b: 16, c: 16}, {a: 256, b: 4, c: 32}"
+      +paired: "{a: 256, b: 256, c: 1}, {a: 256, b: 64, c: 4}, {a: 256, b: 16, c: 16}, {a: 256, b: 4, c: 32}"
