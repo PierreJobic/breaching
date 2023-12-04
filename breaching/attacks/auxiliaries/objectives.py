@@ -14,13 +14,15 @@ class GradientLoss(torch.nn.Module):
         super().__init__()
         self.task_regularization = 0
 
-    def initialize(self, loss_fn, cfg_impl, local_hyperparams=None):
+    def initialize(self, loss_fn, cfg_impl, local_hyperparams=None, local_learning_rate=None):
         self.loss_fn = loss_fn
         self.local_hyperparams = local_hyperparams
         if self.local_hyperparams is None:
             self._grad_fn = self._grad_fn_single_step
         else:
             self._grad_fn = self._grad_fn_multi_step
+        if local_learning_rate is not None:
+            self.local_learning_rate = local_learning_rate
 
         self.cfg_impl = cfg_impl
 
@@ -44,6 +46,8 @@ class GradientLoss(torch.nn.Module):
         with torch.autocast(candidate.device.type, enabled=self.cfg_impl.mixed_precision):
             task_loss = self.loss_fn(model(candidate), labels)
         gradient = torch.autograd.grad(task_loss, model.parameters(), create_graph=True)
+        if self.local_learning_rate is not None:
+            gradient = [lr * grad for lr, grad in zip(self.local_learning_rate, gradient)]
         return gradient, task_loss
 
     def _grad_fn_multi_step(self, model, candidate, labels):
@@ -111,7 +115,9 @@ class Euclidean(GradientLoss):
         return self._euclidean(gradient_rec, gradient_data) * self.scale
 
     def __repr__(self):
-        return f"Euclidean loss with scale={self.scale} and task reg={self.task_regularization}"
+        a = f"Euclidean loss with scale={self.scale} and task reg={self.task_regularization}"
+        b = f" and learning_rate={self.local_learning_rate}" if self.local_learning_rate is not None else ""
+        return a + b
 
     @staticmethod
     @torch.jit.script
@@ -154,7 +160,10 @@ class EuclideanTag(GradientLoss):
         return self._weighted_euclidean_l1(gradient_rec, gradient_data, weights, self.tag_scale) * self.scale
 
     def __repr__(self):
-        return f"Tag loss with scale={self.scale}, weight scheme {self.scale_scheme}, L1 scale {self.tag_scale} " f"and task reg={self.task_regularization}"
+        return (
+            f"Tag loss with scale={self.scale}, weight scheme {self.scale_scheme}, L1 scale {self.tag_scale} "
+            f"and task reg={self.task_regularization}"
+        )
 
     @staticmethod
     @torch.jit.script
