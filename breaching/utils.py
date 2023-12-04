@@ -15,7 +15,9 @@ import numpy as np
 import datetime
 
 import hydra
+
 from omegaconf import OmegaConf, open_dict
+from functools import reduce
 
 import logging
 
@@ -244,6 +246,7 @@ def return_overview(server, user, attacker):
     overview.append(user.__repr__())
     overview.append(server.__repr__())
     overview.append(attacker.__repr__())
+    overview = reduce(lambda x, y: x + y, overview)
     return overview
 
 

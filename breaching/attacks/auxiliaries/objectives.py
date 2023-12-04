@@ -21,8 +21,7 @@ class GradientLoss(torch.nn.Module):
             self._grad_fn = self._grad_fn_single_step
         else:
             self._grad_fn = self._grad_fn_multi_step
-        if local_learning_rate is not None:
-            self.local_learning_rate = local_learning_rate
+        self.local_learning_rate = local_learning_rate
 
         self.cfg_impl = cfg_impl
 
@@ -47,7 +46,7 @@ class GradientLoss(torch.nn.Module):
             task_loss = self.loss_fn(model(candidate), labels)
         gradient = torch.autograd.grad(task_loss, model.parameters(), create_graph=True)
         if self.local_learning_rate is not None:
-            gradient = [lr * grad for lr, grad in zip(self.local_learning_rate, gradient)]
+            gradient = [-self.local_learning_rate * grad for grad in gradient]
         return gradient, task_loss
 
     def _grad_fn_multi_step(self, model, candidate, labels):
@@ -116,8 +115,7 @@ class Euclidean(GradientLoss):
 
     def __repr__(self):
         a = f"Euclidean loss with scale={self.scale} and task reg={self.task_regularization}"
-        b = f" and learning_rate={self.local_learning_rate}" if self.local_learning_rate is not None else ""
-        return a + b
+        return a
 
     @staticmethod
     @torch.jit.script
