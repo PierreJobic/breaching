@@ -158,7 +158,7 @@ class UserSingleStep(torch.nn.Module):
         if self.clip_value > 0:  # Compute per-example gradients and clip them in this case
             shared_grads = [torch.zeros_like(p) for p in self.model.parameters()]
             for data_idx in range(B):
-                data_point = {key: val[data_idx:data_idx + 1] for key, val in data.items()}
+                data_point = {key: val[data_idx : data_idx + 1] for key, val in data.items()}
                 per_example_grads = _compute_batch_gradient(data_point)
                 self._clip_list_of_grad_(per_example_grads)
                 torch._foreach_add_(shared_grads, per_example_grads)
@@ -176,6 +176,7 @@ class UserSingleStep(torch.nn.Module):
         metadata = dict(
             num_data_points=self.num_data_points if self.provide_num_data_points else None,
             labels=data["labels"].sort()[0] if self.provide_labels else None,
+            local_learning_rate=None,
             local_hyperparams=None,
         )
         shared_data = dict(
@@ -316,6 +317,7 @@ class UserMultiStep(UserSingleStep):
         self.num_data_per_local_update_step = cfg_user.num_data_per_local_update_step
         self.local_learning_rate = cfg_user.local_learning_rate
         self.provide_local_hyperparams = cfg_user.provide_local_hyperparams
+        self.provide_local_lr = cfg_user.get("provide_local_lr", False)
 
     def __repr__(self):
         n = "\n"
@@ -329,6 +331,7 @@ class UserMultiStep(UserSingleStep):
 
         Threat model:
         Share these hyperparams to server: {self.provide_local_hyperparams}
+        Share local learning rate to server: {self.provide_local_lr or self.provide_local_hyperparams}
 
         """
         )
@@ -360,7 +363,7 @@ class UserMultiStep(UserSingleStep):
         label_list = []
         for step in range(self.num_local_updates):
             data = {
-                k: v[seen_data_idx:seen_data_idx + self.num_data_per_local_update_step] for k, v in user_data.items()
+                k: v[seen_data_idx : seen_data_idx + self.num_data_per_local_update_step] for k, v in user_data.items()
             }
             seen_data_idx += self.num_data_per_local_update_step
             seen_data_idx = seen_data_idx % self.num_data_points
@@ -395,6 +398,7 @@ class UserMultiStep(UserSingleStep):
         metadata = dict(
             num_data_points=self.num_data_points if self.provide_num_data_points else None,
             labels=user_data["labels"] if self.provide_labels else None,
+            local_learning_rate=self.local_learning_rate if self.provide_local_lr else None,
             local_hyperparams=dict(
                 lr=self.local_learning_rate,
                 steps=self.num_local_updates,
@@ -500,7 +504,9 @@ class MultiUserAggregate(UserMultiStep):
                 aggregate_labels.append(user_data["metadata"]["labels"])
             if params := user_data["metadata"]["local_hyperparams"] is not None:
                 if params["labels"] is not None:
-                    aggregate_label_lists += [labels.cpu() for labels in user_data["metadata"]["local_hyperparams"]["labels"]]
+                    aggregate_label_lists += [
+                        labels.cpu() for labels in user_data["metadata"]["local_hyperparams"]["labels"]
+                    ]
 
         shared_data = dict(
             gradients=aggregate_updates,

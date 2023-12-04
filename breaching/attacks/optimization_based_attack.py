@@ -107,7 +107,12 @@ class OptimizationBasedAttacker(_BaseAttacker):
         # Initialize losses:
         for regularizer in self.regularizers:
             regularizer.initialize(rec_model, shared_data, labels)
-        self.objective.initialize(self.loss_fn, self.cfg.impl, shared_data[0]["metadata"]["local_hyperparams"])
+        self.objective.initialize(
+            self.loss_fn,
+            self.cfg.impl,
+            shared_data[0]["metadata"]["local_hyperparams"],
+            shared_data[0]["metadata"]["local_learning_rate"],
+        )
 
         # Initialize candidate reconstruction data
         candidate = self._initialize_data([shared_data[0]["metadata"]["num_data_points"], *self.data_shape])

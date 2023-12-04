@@ -6,6 +6,7 @@ defaults:
   - attack: Adam_DLG
   - _self_
   - override hydra/job_logging: custom
+  - override hydra/hydra_logging: colorlog
 
 base_dir: outputs
 hydra:
