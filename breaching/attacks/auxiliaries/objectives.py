@@ -1,10 +1,14 @@
 """Various objective functions that can be re-used for multiple attacks."""
-
+import logging
 import torch
+
 from typing import List
 
 from .make_functional import make_functional_with_buffers
 from .mask_functions import mask_lookup
+
+
+log = logging.getLogger(__name__)
 
 
 class GradientLoss(torch.nn.Module):
@@ -19,8 +23,10 @@ class GradientLoss(torch.nn.Module):
         self.local_hyperparams = local_hyperparams
         if self.local_hyperparams is None:
             self._grad_fn = self._grad_fn_single_step
+            log.info("Using single-step gradient computation.")
         else:
             self._grad_fn = self._grad_fn_multi_step
+            log.info("Using multi-step gradient computation.")
         self.local_learning_rate = local_learning_rate
 
         self.cfg_impl = cfg_impl

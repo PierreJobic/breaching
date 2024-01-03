@@ -1,0 +1,26 @@
+# @package _global_
+
+defaults:
+  - override /case/user: local_updates
+  - _self_
+  # - override /hydra/launcher: joblib
+
+name: Fantastyc
+paired_num_epochs: 1
+paired: {b: null, c: null}
+model: ResNet18
+
+case:
+  user:
+    num_data_points: 16
+    num_data_per_local_update_step: ${paired.b}
+    num_local_updates: "${multiply: ${paired.c}, ${paired_num_epochs}}"
+    local_learning_rate: 0.01 # default is 0.001
+    provide_local_lr: True
+
+hydra:
+  sweeper:
+    params:
+      +paired: "{b: 32, c: 1}, {b: 16, c: 2}, {b: 8, c: 4}, {b: 1, c: 32}"
+      case.user.provide_local_hyperparams: False, True
+      paired_num_epochs: 1, 5
