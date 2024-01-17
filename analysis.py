@@ -181,7 +181,7 @@ def plot_2d_df(
             grouped_df = df
         for i, metric in enumerate(metric_list):
             if not all_same_loss:
-                color = cm.viridis(np.linspace(0, 1, len(keyword_values)))
+                color = cm.viridis(np.linspace(0, 1, len(keyword_values) // 4))
                 j = 0
             # Create a separate plot for each keyword combination
             for keyword_value_pairs in keyword_values:
