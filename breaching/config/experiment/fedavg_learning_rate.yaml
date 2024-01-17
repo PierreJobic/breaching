@@ -5,7 +5,7 @@ defaults:
   - _self_
   # - override /hydra/launcher: joblib
 
-name: Fantastyc/ResNet18_16
+name: Fantastyc/ResNet18_lr
 paired_num_epochs: 1
 paired: {b: null, c: null}
 model: ResNet18
@@ -21,6 +21,7 @@ case:
 hydra:
   sweeper:
     params:
-      +paired: "{b: 16, c: 1}, {b: 8, c: 2}, {b: 4, c: 4}, {b: 2, c: 8}, {b: 1, c: 16}"
+      +paired: "{b: 16, c: 1}, {b: 1, c: 16}"
       case.user.provide_local_hyperparams: False, True
+      case.user.local_learning_rate: 0.0001, 0.001, 0.01, 0.1
       paired_num_epochs: 1, 5
