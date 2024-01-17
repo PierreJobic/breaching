@@ -28,6 +28,8 @@ class GradientLoss(torch.nn.Module):
             self._grad_fn = self._grad_fn_multi_step
             log.info("Using multi-step gradient computation.")
         self.local_learning_rate = local_learning_rate
+        if local_learning_rate is not None:
+            log.info("Local learning rate shared by the client is {self.local_learning_rate}.")
 
         self.cfg_impl = cfg_impl
 
@@ -52,6 +54,7 @@ class GradientLoss(torch.nn.Module):
             task_loss = self.loss_fn(model(candidate), labels)
         gradient = torch.autograd.grad(task_loss, model.parameters(), create_graph=True)
         if self.local_learning_rate is not None:
+            # We received gradient = p_local - p_server = - local_learning_rate * grad
             gradient = [-self.local_learning_rate * grad for grad in gradient]
         return gradient, task_loss
 

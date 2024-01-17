@@ -5,10 +5,10 @@ defaults:
   - _self_
   # - override /hydra/launcher: joblib
 
-name: Fantastyc/ResNet18_lr
+name: FedAVG
 paired_num_epochs: 1
 paired: {b: null, c: null}
-model: ResNet18
+case.model: ResNet18
 
 case:
   user:
