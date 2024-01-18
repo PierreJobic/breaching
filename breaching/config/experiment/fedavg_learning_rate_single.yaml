@@ -7,7 +7,7 @@ defaults:
 
 name: FedAVG
 paired_num_epochs: 1
-paired: {b: null, c: null}
+paired: {b: 16, c: 1}
 
 case:
   model: ResNet18
@@ -17,10 +17,12 @@ case:
     num_local_updates: "${multiply: ${paired.c}, ${paired_num_epochs}}"
     local_learning_rate: 0.01 # default is 0.001
     provide_local_lr: True
+    provide_local_hyperparams: False
 
-hydra:
-  sweeper:
-    params:
-      +paired: "{b: 16, c: 1}, {b: 8, c: 2}, {b: 4, c: 4}, {b: 2, c: 8}, {b: 1, c: 16}"
-      case.user.provide_local_hyperparams: False, True
-      paired_num_epochs: 1, 5
+# hydra:
+#   sweeper:
+#     params:
+#       +paired: "{b: 16, c: 1}, {b: 1, c: 16}"
+#       case.user.provide_local_hyperparams: False, True
+#       case.user.local_learning_rate: 0.0001, 0.001, 0.01, 0.1
+#       paired_num_epochs: 1, 5

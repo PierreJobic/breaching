@@ -127,9 +127,6 @@ class OptimizationBasedAttacker(_BaseAttacker):
         current_wallclock = time.time()
         objective_values = np.zeros(self.cfg.optim.max_iterations)
         minimal_iteration_so_far = 0
-        # print(len(shared_data))
-        # print(shared_data[0].keys())
-        # print(stats)
         try:
             for iteration in range(self.cfg.optim.max_iterations):
                 closure = self._compute_objective(candidate, labels, rec_model, optimizer, shared_data, iteration)

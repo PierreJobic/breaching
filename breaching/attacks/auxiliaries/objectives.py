@@ -29,14 +29,19 @@ class GradientLoss(torch.nn.Module):
             log.info("Using multi-step gradient computation.")
         self.local_learning_rate = local_learning_rate
         if local_learning_rate is not None:
-            log.info("Local learning rate shared by the client is {self.local_learning_rate}.")
+            log.info(f"Local learning rate shared by the client is {self.local_learning_rate}.")
 
         self.cfg_impl = cfg_impl
 
     def forward(self, model, gradient_data, candidate, labels):
         gradient, task_loss = self._grad_fn(model, candidate, labels)
         with torch.autocast(candidate.device.type, enabled=self.cfg_impl.mixed_precision):
-            objective = self.gradient_based_loss(gradient, gradient_data)
+            if self.local_learning_rate is not None:
+                objective = self.gradient_based_loss(
+                    gradient, [grad / (-self.local_learning_rate) for grad in gradient_data]
+                )
+            else:
+                objective = self.gradient_based_loss(gradient, gradient_data)
         if self.task_regularization != 0:
             objective += self.task_regularization * task_loss
         return objective, task_loss.detach()
@@ -53,9 +58,10 @@ class GradientLoss(torch.nn.Module):
         with torch.autocast(candidate.device.type, enabled=self.cfg_impl.mixed_precision):
             task_loss = self.loss_fn(model(candidate), labels)
         gradient = torch.autograd.grad(task_loss, model.parameters(), create_graph=True)
-        if self.local_learning_rate is not None:
-            # We received gradient = p_local - p_server = - local_learning_rate * grad
-            gradient = [-self.local_learning_rate * grad for grad in gradient]
+        # if self.local_learning_rate is not None:
+        #     # We received gradient = p_local - p_server = - local_learning_rate * grad
+        #     # gradient = [-self.local_learning_rate * grad for grad in gradient]
+        #     pass
         return gradient, task_loss
 
     def _grad_fn_multi_step(self, model, candidate, labels):

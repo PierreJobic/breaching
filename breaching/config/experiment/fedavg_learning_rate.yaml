@@ -8,9 +8,9 @@ defaults:
 name: FedAVG
 paired_num_epochs: 1
 paired: {b: null, c: null}
-case.model: ResNet18
 
 case:
+  model: ResNet18
   user:
     num_data_points: 16
     num_data_per_local_update_step: ${paired.b}
