@@ -36,7 +36,7 @@ class GradientLoss(torch.nn.Module):
     def forward(self, model, gradient_data, candidate, labels):
         gradient, task_loss = self._grad_fn(model, candidate, labels)
         with torch.autocast(candidate.device.type, enabled=self.cfg_impl.mixed_precision):
-            if self.local_learning_rate is not None:
+            if self.local_learning_rate is not None and self.local_hyperparams is None:
                 objective = self.gradient_based_loss(
                     gradient, [grad / (-self.local_learning_rate) for grad in gradient_data]
                 )

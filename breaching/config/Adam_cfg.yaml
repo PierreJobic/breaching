@@ -37,7 +37,7 @@ load_model_path: None
 attack:
   optim:
     stopping:
-      patience: 100
+      patience: 300
       min_delta: 0.05
 
 # Using GPU

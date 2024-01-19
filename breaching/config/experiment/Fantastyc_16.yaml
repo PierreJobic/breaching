@@ -1,7 +1,9 @@
 # @package _global_
 
 defaults:
+  - override /case/data: CIFAR100
   - override /case/user: local_updates
+  - override /attack: modified_invertinggradients
   - _self_
   # - override /hydra/launcher: joblib
 
@@ -9,18 +11,23 @@ name: FedAVG
 paired_num_epochs: 1
 paired: {b: null, c: null}
 
+attack:
+  optim:
+    stopping: False
+
 case:
   model: ResNet18
   user:
-    num_data_points: 16
+    num_data_points: 8
     num_data_per_local_update_step: ${paired.b}
     num_local_updates: "${multiply: ${paired.c}, ${paired_num_epochs}}"
     local_learning_rate: 0.01 # default is 0.001
+    provide_local_hyperparams: False
     provide_local_lr: True
 
 hydra:
   sweeper:
     params:
-      +paired: "{b: 16, c: 1}, {b: 8, c: 2}, {b: 4, c: 4}, {b: 2, c: 8}, {b: 1, c: 16}"
+      +paired: "{b: 8, c: 1}, {b: 4, c: 2}, {b: 2, c: 4}, {b: 1, c: 8}"
       case.user.provide_local_hyperparams: False, True
-      paired_num_epochs: 1, 5
+      paired_num_epochs: 1, 10
