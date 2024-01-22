@@ -1,0 +1,34 @@
+# @package _global_
+
+defaults:
+  - override /case/data: CIFAR100
+  - override /case/user: local_updates
+  - override /attack: modified_invertinggradients
+  - _self_
+  # - override /hydra/launcher: joblib
+
+name: FedAVG
+paired_num_epochs: 1
+paired: {b: null, c: null}
+
+attack:
+  attack_type: label-order-optimization
+  optim:
+    stopping: False
+
+case:
+  model: ResNet18
+  user:
+    num_data_points: 4
+    num_data_per_local_update_step: ${paired.b}
+    num_local_updates: "${multiply: ${paired.c}, ${paired_num_epochs}}"
+    local_learning_rate: 0.001 # default is 0.001
+    provide_local_hyperparams: True
+    provide_label_order: False
+
+hydra:
+  sweeper:
+    params:
+      +paired: "{b: 4, c: 1}, {b: 2, c: 2}, {b: 1, c: 4}"
+      case.user.provide_local_hyperparams: False, True
+      paired_num_epochs: 1, 10
