@@ -7,27 +7,28 @@ defaults:
   - _self_
   # - override /hydra/launcher: joblib
 
-name: FedAVG
+name: FedAVG_LabelOrder
 paired_num_epochs: 1
 paired: {b: null, c: null}
 
 attack:
+  attack_type: label-order-optimization
   optim:
     stopping: False
 
 case:
   model: ResNet18
   user:
-    num_data_points: 8
+    num_data_points: 4
     num_data_per_local_update_step: ${paired.b}
     num_local_updates: "${multiply: ${paired.c}, ${paired_num_epochs}}"
-    local_learning_rate: 0.01 # default is 0.001
-    provide_local_hyperparams: False
-    provide_local_lr: True
+    local_learning_rate: 0.001 # default is 0.001
+    provide_local_hyperparams: True
+    provide_label_order: False
 
 hydra:
   sweeper:
     params:
-      +paired: "{b: 8, c: 1}, {b: 4, c: 2}, {b: 2, c: 4}, {b: 1, c: 8}"
-      case.user.provide_local_hyperparams: False, True
+      +paired: "{b: 4, c: 1}, {b: 1, c: 4}"
+      case.user.local_learning_rate: 0.0001, 0.01, 0.1
       paired_num_epochs: 1, 10

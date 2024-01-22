@@ -317,7 +317,7 @@ class UserMultiStep(UserSingleStep):
         self.num_data_per_local_update_step = cfg_user.num_data_per_local_update_step
         self.local_learning_rate = cfg_user.local_learning_rate
         self.provide_local_hyperparams = cfg_user.provide_local_hyperparams
-        self.provide_local_lr = cfg_user.get("provide_local_lr", False)
+        self.provide_label_order = cfg_user.get("provide_label_order", True)
 
     def __repr__(self):
         n = "\n"
@@ -331,7 +331,6 @@ class UserMultiStep(UserSingleStep):
 
         Threat model:
         Share these hyperparams to server: {self.provide_local_hyperparams}
-        Share local learning rate to server: {self.provide_local_lr or self.provide_local_hyperparams}
 
         """
         )
@@ -386,11 +385,19 @@ class UserMultiStep(UserSingleStep):
             self._apply_differential_noise(grads_ref)
             optimizer.step()
 
-        # Share differential to server version:
+        # # Share differential to server version:
+        # # This is equivalent to sending the new stuff and letting the server do it, but in line
+        # # with the gradients sent in UserSingleStep
+        # shared_grads = [
+        #     (p_local - p_server.to(**self.setup)).clone().detach()
+        #     for (p_local, p_server) in zip(self.model.parameters(), parameters)
+        # ]
+
+        # Share gradient to server version:
         # This is equivalent to sending the new stuff and letting the server do it, but in line
         # with the gradients sent in UserSingleStep
         shared_grads = [
-            (p_local - p_server.to(**self.setup)).clone().detach()
+            ((p_local - p_server.to(**self.setup)) / (-self.local_learning_rate)).clone().detach()
             for (p_local, p_server) in zip(self.model.parameters(), parameters)
         ]
 
@@ -398,12 +405,11 @@ class UserMultiStep(UserSingleStep):
         metadata = dict(
             num_data_points=self.num_data_points if self.provide_num_data_points else None,
             labels=user_data["labels"] if self.provide_labels else None,
-            local_learning_rate=self.local_learning_rate if self.provide_local_lr else None,
             local_hyperparams=dict(
                 lr=self.local_learning_rate,
                 steps=self.num_local_updates,
                 data_per_step=self.num_data_per_local_update_step,
-                labels=label_list,
+                labels=label_list if self.provide_label_order else None,
             )
             if self.provide_local_hyperparams
             else None,

@@ -5,6 +5,7 @@ from .optimization_based_attack import OptimizationBasedAttacker
 from .multiscale_optimization_attack import MultiScaleOptimizationAttacker
 from .optimization_with_label_attack import OptimizationJointAttacker
 from .optimization_permutation_attack import OptimizationPermutationAttacker
+from .optimization_with_label_order_based_attack import OptimizationLabelOrderAttacker
 from .analytic_attack import AnalyticAttacker, ImprintAttacker, DecepticonAttacker, AprilAttacker
 from .recursive_attack import RecursiveAttacker
 
@@ -28,6 +29,8 @@ def prepare_attack(model, loss, cfg_attack, setup=dict(dtype=torch.float, device
         attacker = OptimizationJointAttacker(model, loss, cfg_attack, setup)
     elif cfg_attack.attack_type == "permutation-optimization":
         attacker = OptimizationPermutationAttacker(model, loss, cfg_attack, setup)
+    elif cfg_attack.attack_type == "label-order-optimization":
+        attacker = OptimizationLabelOrderAttacker(model, loss, cfg_attack, setup)
     else:
         raise ValueError(f"Invalid type of attack {cfg_attack.attack_type} given.")
 

@@ -91,7 +91,8 @@ class OptimizationJointAttacker(OptimizationBasedAttacker):
 
         # Initialize losses:
         for regularizer in self.regularizers:
-            regularizer.initialize(rec_model, shared_data, labels)
+            # regularizer.initialize(rec_model, shared_data, labels) # WARNING: labels not defined ?
+            regularizer.initialize(rec_model, shared_data, label_template)
         self.objective.initialize(self.loss_fn, self.cfg.impl, shared_data[0]["metadata"]["local_hyperparams"])
 
         # Initialize candidate reconstruction data

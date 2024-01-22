@@ -18,30 +18,26 @@ class GradientLoss(torch.nn.Module):
         super().__init__()
         self.task_regularization = 0
 
-    def initialize(self, loss_fn, cfg_impl, local_hyperparams=None, local_learning_rate=None):
+    def initialize(self, loss_fn, cfg_impl, local_hyperparams=None):
         self.loss_fn = loss_fn
         self.local_hyperparams = local_hyperparams
         if self.local_hyperparams is None:
             self._grad_fn = self._grad_fn_single_step
             log.info("Using single-step gradient computation.")
         else:
-            self._grad_fn = self._grad_fn_multi_step
-            log.info("Using multi-step gradient computation.")
-        self.local_learning_rate = local_learning_rate
-        if local_learning_rate is not None:
-            log.info(f"Local learning rate shared by the client is {self.local_learning_rate}.")
+            if self.local_hyperparams["labels"] is not None:
+                self._grad_fn = self._grad_fn_multi_step
+                log.info("Using multi-step gradient computation.")
+            else:
+                self._grad_fn = self._grad_fn_multi_step_without_label_order
+                log.info("Using multi-step gradient computation without label order.")
 
         self.cfg_impl = cfg_impl
 
     def forward(self, model, gradient_data, candidate, labels):
         gradient, task_loss = self._grad_fn(model, candidate, labels)
         with torch.autocast(candidate.device.type, enabled=self.cfg_impl.mixed_precision):
-            if self.local_learning_rate is not None and self.local_hyperparams is None:
-                objective = self.gradient_based_loss(
-                    gradient, [grad / (-self.local_learning_rate) for grad in gradient_data]
-                )
-            else:
-                objective = self.gradient_based_loss(gradient, gradient_data)
+            objective = self.gradient_based_loss(gradient, gradient_data)
         if self.task_regularization != 0:
             objective += self.task_regularization * task_loss
         return objective, task_loss.detach()
@@ -58,10 +54,6 @@ class GradientLoss(torch.nn.Module):
         with torch.autocast(candidate.device.type, enabled=self.cfg_impl.mixed_precision):
             task_loss = self.loss_fn(model(candidate), labels)
         gradient = torch.autograd.grad(task_loss, model.parameters(), create_graph=True)
-        # if self.local_learning_rate is not None:
-        #     # We received gradient = p_local - p_server = - local_learning_rate * grad
-        #     # gradient = [-self.local_learning_rate * grad for grad in gradient]
-        #     pass
         return gradient, task_loss
 
     def _grad_fn_multi_step(self, model, candidate, labels):
@@ -84,8 +76,47 @@ class GradientLoss(torch.nn.Module):
             # Update parameters in graph:
             params = [param - self.local_hyperparams["lr"] * grad for param, grad in zip(params, step_gradient)]
 
-        # Finally return differentiable difference in state:
-        gradient = [p_local - p_server for p_local, p_server in zip(params, initial_params)]
+        # # Finally return differentiable difference in state:
+        # gradient = [
+        #     (p_local - p_server) for p_local, p_server in zip(params, initial_params)
+        # ]
+
+        # Finally return gradient in state:
+        gradient = [
+            (p_local - p_server) / (-self.local_hyperparams["lr"]) for p_local, p_server in zip(params, initial_params)
+        ]
+
+        # Return last loss as the "best" task loss
+        return gradient, task_loss
+
+    def _grad_fn_multi_step_without_label_order(self, model, candidate, labels):
+        model.zero_grad()
+        func_model, params, buffers = make_functional_with_buffers(model)
+        initial_params = [p.clone() for p in params]
+
+        seen_data_idx = 0
+        for i in range(self.local_hyperparams["steps"]):
+            data = candidate[seen_data_idx : seen_data_idx + self.local_hyperparams["data_per_step"]]
+            seen_data_idx += self.local_hyperparams["data_per_step"]
+            seen_data_idx = seen_data_idx % candidate.shape[0]
+            # labels = self.local_hyperparams["labels"][i]
+            with torch.autocast(candidate.device.type, enabled=self.cfg_impl.mixed_precision):
+                task_loss = self.loss_fn(func_model(params, buffers, data), labels)
+
+            step_gradient = torch.autograd.grad(task_loss, params, create_graph=True)
+
+            # Update parameters in graph:
+            params = [param - self.local_hyperparams["lr"] * grad for param, grad in zip(params, step_gradient)]
+
+        # # Finally return differentiable difference in state:
+        # gradient = [
+        #     (p_local - p_server) for p_local, p_server in zip(params, initial_params)
+        # ]
+
+        # Finally return gradient in state:
+        gradient = [
+            (p_local - p_server) / (-self.local_hyperparams["lr"]) for p_local, p_server in zip(params, initial_params)
+        ]
 
         # Return last loss as the "best" task loss
         return gradient, task_loss

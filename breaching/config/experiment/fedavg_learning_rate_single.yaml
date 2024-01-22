@@ -9,7 +9,7 @@ defaults:
 
 name: FedAVG
 paired_num_epochs: 1
-paired: {b: 4, c: 2}
+paired: {b: 8, c: 1}
 
 attack:
   optim:
