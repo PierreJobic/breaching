@@ -2,14 +2,14 @@ timeout_min: 720 # [1day=1440, 2day=2880, 5day=7200]
 nodes: 1
 tasks_per_node: 4
 gpus_per_task: 1
-cpus_per_gpu: 12
+cpus_per_task: 12
 mem_per_cpu: 3
 
 # default value
 submitit_folder: ${hydra.sweep.dir}/.submitit/%j
 gpus_per_node: null
 mem_gb: null
-cpus_per_task: null
+cpus_per_gpu: null
 
 
 name: ${hydra.job.name}
