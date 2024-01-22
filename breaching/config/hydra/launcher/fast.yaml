@@ -13,7 +13,7 @@ mem_gb: 64
 
 name: ${hydra.job.name}
 _target_: hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher
-partition: allgpu,gpuv100,gpup6000,classicgpu
+partition: null
 qos: null
 comment: null
 constraint: null
